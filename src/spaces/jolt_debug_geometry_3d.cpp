@@ -142,7 +142,7 @@ void JoltDebugGeometry3D::_process([[maybe_unused]] double p_delta) {
 	if (unlikely(physics_server == nullptr)) {
 		ERR_PRINT_ONCE(
 			"JoltDebugGeometry3D was unable to retrieve the Jolt-based physics server. Make sure "
-			"that you have set 'Jolt Physics (Extension)' as the currently active physics server "
+			"that you have set 'Jolt Rollback (Extension)' as the currently active physics server "
 			"in your project settings."
 		);
 

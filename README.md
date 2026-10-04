@@ -100,7 +100,7 @@ Jellyfish) or newer.
 4. Open your project settings
 5. Make sure "Advanced Settings" is enabled
 6. Go to "Physics" and then "3D"
-7. Change "Physics Engine" to "Jolt Physics (Extension)"
+7. Change "Physics Engine" to "Jolt Rollback (Extension)"
 8. Restart Godot
 
 ## What settings are there?

@@ -1,0 +1,73 @@
+[gd_scene format=3 uid="uid://dk228exkj1b80"]
+
+[ext_resource type="Script" uid="uid://dapempwtdvft7" path="res://scenes/rollback/rigid_body_3d.gd" id="1_jdamn"]
+[ext_resource type="Script" uid="uid://cer7pl2ehliqx" path="res://scenes/rollback/multiplayer_test.gd" id="2_split"]
+[ext_resource type="Script" uid="uid://bu063cseoks6e" path="res://scenes/rollback/test_server.gd" id="3_server"]
+[ext_resource type="Script" uid="uid://b2atlgp642ntm" path="res://scenes/rollback/test_client.gd" id="4_client"]
+
+[sub_resource type="Environment" id="Environment_fgc8u"]
+background_mode = 1
+background_color = Color(0.45840502, 0.45840508, 0.45840502, 1)
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_fgc8u"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_jdamn"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_fgc8u"]
+size = Vector2(20, 20)
+subdivide_width = 20
+subdivide_depth = 20
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jdamn"]
+albedo_color = Color(0.21196708, 0.50194496, 0.61282843, 1)
+
+[sub_resource type="WorldBoundaryShape3D" id="WorldBoundaryShape3D_qcrav"]
+
+[node name="MultiplayerTest" type="Node3D" unique_id=120217870]
+script = ExtResource("2_split")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=164085182]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2073199454]
+environment = SubResource("Environment_fgc8u")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=576163726]
+transform = Transform3D(1, 0, 0, 0, -4.3711385e-08, 0.99999994, 0, -0.99999994, -4.3711385e-08, 0, 10, 0)
+projection = 1
+size = 7.0
+
+[node name="RigidBody3D" type="RigidBody3D" parent="." unique_id=934339058]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+script = ExtResource("1_jdamn")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D" unique_id=85253426]
+mesh = SubResource("SphereMesh_fgc8u")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D" unique_id=1642431645]
+shape = SubResource("SphereShape3D_jdamn")
+
+[node name="Ground" type="StaticBody3D" parent="." unique_id=1310945485]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground" unique_id=394568824]
+mesh = SubResource("PlaneMesh_fgc8u")
+skeleton = NodePath("../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_jdamn")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground" unique_id=89460213]
+shape = SubResource("WorldBoundaryShape3D_qcrav")
+
+[node name="Server" type="Node" parent="." unique_id=1124453406]
+script = ExtResource("3_server")
+
+[node name="Client" type="Node" parent="." unique_id=78500933]
+script = ExtResource("4_client")
+
+[node name="Client2" type="Node" parent="." unique_id=190678868]
+script = ExtResource("4_client")
+
+[node name="Client3" type="Node" parent="." unique_id=1376403736]
+script = ExtResource("4_client")

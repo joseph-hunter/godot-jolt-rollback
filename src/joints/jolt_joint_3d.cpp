@@ -146,7 +146,7 @@ JoltPhysicsServer3DExtension* JoltJoint3D::_get_jolt_physics_server() {
 	if (unlikely(physics_server == nullptr)) {
 		ERR_PRINT_ONCE(
 			"JoltJoint3D was unable to retrieve the Jolt-based physics server. "
-			"Make sure that you have 'Jolt Physics (Extension)' set as the currently active "
+			"Make sure that you have 'Jolt Rollback (Extension)' set as the currently active "
 			"physics engine. All Jolt-specific functionality related to joints will be ignored."
 		);
 	}

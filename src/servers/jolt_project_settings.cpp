@@ -149,8 +149,8 @@ void migrate_physics_engine_setting() {
 
 	if (project_settings->has_setting(setting_name)) {
 		String setting_value = project_settings->get_setting_with_override(setting_name);
-		if (setting_value == "JoltPhysics3D") {
-			project_settings->set_setting(setting_name, "Jolt Physics (Extension)");
+		if (setting_value == "JoltPhysics3D" || setting_value == "Jolt Physics (Extension)") {
+			project_settings->set_setting(setting_name, "Jolt Rollback (Extension)");
 		}
 	}
 }

@@ -30,7 +30,7 @@ void on_initialize(ModuleInitializationLevel p_level) {
 			GDREGISTER_VIRTUAL_CLASS(JoltPhysicsServer3DExtension);
 
 			PhysicsServer3DManager::get_singleton()->register_server(
-				"Jolt Physics (Extension)",
+				"Jolt Rollback (Extension)",
 				callable_mp_static(&create_jolt_physics_server)
 			);
 		} break;

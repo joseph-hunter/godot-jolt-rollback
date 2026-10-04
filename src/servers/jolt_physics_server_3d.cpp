@@ -2060,6 +2060,7 @@ void JoltPhysicsServer3DExtension::_init() {
 	job_system = new JoltJobSystem();
 }
 
+/* Currently advances every active space when Godot requests a physics update */
 void JoltPhysicsServer3DExtension::_step(real_t p_step) {
 	if (!active) {
 		return;

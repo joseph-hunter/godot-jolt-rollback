@@ -12,6 +12,48 @@ This document contains instructions for how to build Godot Jolt from source.
 - [Building for iOS](#building-for-ios)
 - [Building for Android](#building-for-android)
 - [Building for double-precision](#building-for-double-precision)
+- [New source files and IntelliSense](#new-source-files-and-intellisense)
+
+## New source files and IntelliSense
+
+The root `CMakeLists.txt` recursively discovers `src/*.cpp` and `src/*.hpp` with
+`CONFIGURE_DEPENDS`. This includes `src/rollback/jolt_rollback.cpp` and
+`src/rollback/jolt_rollback.hpp`; no separate source-list entry is needed.
+
+After adding source files, re-run configuration to refresh the build graph and
+IntelliSense compilation database. From the x64 Native Tools Command Prompt,
+in the repository root:
+
+```sh
+cmake --preset windows-msvc-x64
+```
+
+This configures the project without building the extension. The presets enable
+`CMAKE_EXPORT_COMPILE_COMMANDS`, which generates
+`build/windows-msvc-x64/compile_commands.json` for this preset. Do not edit that
+generated file manually.
+
+The local VS Code settings use that database through
+`C_Cpp.default.compileCommands`. Open this repository as the workspace folder.
+If using another preset, point that setting to its corresponding
+`build/<preset>/compile_commands.json`. With CMake Tools installed, selecting the
+matching configure preset and running **CMake: Configure** is the editor equivalent.
+If Microsoft C/C++ IntelliSense remains stale after configuration, run
+**C/C++: Reset IntelliSense Database**.
+
+Configuration refreshes the source-file list; dependency headers and generated
+headers must also exist for complete IntelliSense. On a fresh checkout, follow
+the platform build instructions below to prepare those dependencies.
+
+When ready to compile, use the existing build preset, for example:
+
+```sh
+cmake --build --preset windows-msvc-x64-editor-debug
+```
+
+The rollback files are compiled into the existing extension target. They do not
+yet enable rollback automatically: see [rollback integration notes](rollback.md)
+for the remaining adapter and Godot binding work.
 
 ## Building for Windows
 
