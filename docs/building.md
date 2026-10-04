@@ -12,6 +12,7 @@ This document contains instructions for how to build Godot Jolt from source.
 - [Building for iOS](#building-for-ios)
 - [Building for Android](#building-for-android)
 - [Building for double-precision](#building-for-double-precision)
+- [Building with cross-platform determinism](#building-with-cross-platform-determinism)
 - [New source files and IntelliSense](#new-source-files-and-intellisense)
 
 ## New source files and IntelliSense
@@ -290,3 +291,44 @@ You would instead do this:
 # Generate the build directory with double-precision enabled
 cmake --preset windows-msvc-x64 -DGDJ_DOUBLE_PRECISION=TRUE
 ```
+
+## Building with cross-platform determinism
+
+`GDJ_CROSS_PLATFORM_DETERMINISTIC` is a CMake boolean option declared in
+`cmake/GodotJoltOptions.cmake`. It defaults to `OFF`. To enable it for the Windows
+MSVC x64 build, run these commands from the matching x64 Native Tools environment:
+
+```sh
+cmake --preset windows-msvc-x64 -DGDJ_CROSS_PLATFORM_DETERMINISTIC=ON
+cmake --build --preset windows-msvc-x64-editor-debug
+```
+
+For other platforms, use the corresponding configure and build presets with the
+same `-DGDJ_CROSS_PLATFORM_DETERMINISTIC=ON` configure argument. The setting is
+stored in that build directory's CMake cache and persists across subsequent
+builds. To disable it, reconfigure with `OFF` and rebuild. Changing the declared
+default does not override an existing cached value.
+
+`cmake/GodotJoltExternalJolt.cmake` forwards this setting to Jolt's separate build
+as `CROSS_PLATFORM_DETERMINISTIC` and conditionally exposes
+`JPH_CROSS_PLATFORM_DETERMINISTIC` to the extension. Both sides must agree;
+setting only the upstream option on the top-level configure command is not a
+substitute for this wiring. On MSVC, Jolt's deterministic configuration selects
+`/fp:precise` instead of `/fp:fast`.
+
+After building, verify the following entries:
+
+- `build/windows-msvc-x64/CMakeCache.txt`:
+  `GDJ_CROSS_PLATFORM_DETERMINISTIC:BOOL=ON`
+- `build/windows-msvc-x64/External/Build/jolt/CMakeCache.txt`:
+  `CROSS_PLATFORM_DETERMINISTIC:BOOL=ON`
+
+Rebuild and install every configuration you intend to use, then restart Godot
+so it loads the rebuilt library. The build preset above installs the editor
+binary into the examples project.
+
+This enables Jolt's cross-platform determinism configuration; it does not certify
+the Godot integration or gameplay code as deterministic. Matching source and
+build settings, fixed timesteps, repeatable operation ordering, and complete
+state restoration still matter. Validate save/restore/replay separately before
+relying on it for rollback.

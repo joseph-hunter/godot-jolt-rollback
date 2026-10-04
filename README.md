@@ -46,6 +46,11 @@ like breakable joints, soft limits and the ability to override solver iterations
 
 ## What about determinism?
 
+This fork exposes the build option `GDJ_CROSS_PLATFORM_DETERMINISTIC` (default: `OFF`).
+Enabling it builds Jolt with its cross-platform determinism configuration and applies the
+matching definition to the extension. See [building with cross-platform determinism](docs/building.md#building-with-cross-platform-determinism)
+for configuration and verification instructions.
+
 While Jolt itself offers deterministic simulations, Godot Jolt is not able to make such guarantees.
 Simulations in Godot Jolt may look deterministic, and may even happen to be deterministic, but this
 should not be relied upon if determinism is a hard requirement.
