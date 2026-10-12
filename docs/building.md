@@ -295,7 +295,9 @@ cmake --preset windows-msvc-x64 -DGDJ_DOUBLE_PRECISION=TRUE
 ## Building with cross-platform determinism
 
 `GDJ_CROSS_PLATFORM_DETERMINISTIC` is a CMake boolean option declared in
-`cmake/GodotJoltOptions.cmake`. It defaults to `OFF`. To enable it for the Windows
+`cmake/GodotJoltOptions.cmake`. It defaults to `ON` for this rollback fork. Existing
+build caches retain their previous value; explicitly configure `ON` when updating
+an older build directory. To enable it for the Windows
 MSVC x64 build, run these commands from the matching x64 Native Tools environment:
 
 ```sh

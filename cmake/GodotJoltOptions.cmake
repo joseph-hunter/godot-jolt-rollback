@@ -33,7 +33,7 @@ set(GDJ_DOUBLE_PRECISION FALSE
 	"Compile with 64-bit floating-point precision."
 )
 
-set(GDJ_CROSS_PLATFORM_DETERMINISTIC FALSE
+set(GDJ_CROSS_PLATFORM_DETERMINISTIC TRUE
 	CACHE BOOL
 	"Enable cross-platform determinism in Jolt."
 )

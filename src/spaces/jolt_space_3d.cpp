@@ -149,6 +149,14 @@ JoltSpace3D::~JoltSpace3D() {
 	delete_safely(temp_allocator);
 }
 
+void JoltSpace3D::fail_rollback(const String& p_error) {
+	if (is_rollback_failed()) {
+		return;
+	}
+	rollback_error = p_error.is_empty() ? String("Rollback simulation failed.") : p_error;
+	ERR_PRINT(vformat("Rollback space %d stopped: %s", rid.get_id(), rollback_error));
+}
+
 void JoltSpace3D::step(float p_step) {
 	last_step = p_step;
 

@@ -19,6 +19,7 @@ Initial scope is a fixed-timestep, fixed-topology physics world: participating b
 The following decisions govern the first implementation and narrow the broader architecture described below:
 
 - Use two simple interacting rigid-body cubes or spheres, not forklift gameplay. Replay both bodies together in one physics space. Static collision geometry remains unchanged. Whole-world rollback is the longer-term goal.
+- Target Godot 4.6 and native Windows/Linux builds, including SteamOS and Bazzite. Pin exact runtime and dependency revisions in the implementation audit. The forklift work in Phase 5 and broader acceptance checks follow the two-body proof of concept.
 - Keep gameplay state minimal, but save any mutable values introduced by the test that influence future simulation.
 - Support and verify `_integrate_forces()` during normal execution and replay. Body/node state synchronization remains required infrastructure. Other user-facing physics event callbacks, area events, navigation, and dynamic topology are outside the first proof of concept.
 - Broader callback support is an important future requirement, not permanently excluded. Keep callback delivery structured so these features can be added without redesigning the tick boundary.

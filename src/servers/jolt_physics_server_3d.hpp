@@ -653,11 +653,11 @@ public:
 
 	void _step(real_t p_step) override;
 
-	void _sync() override { }
+	void _sync() override;
 
 	void _flush_queries() override;
 
-	void _end_sync() override { }
+	void _end_sync() override;
 
 	void _finish() override;
 
@@ -794,7 +794,42 @@ public:
 
 	float generic_6dof_joint_get_applied_torque(const RID& p_joint);
 
+	bool rollback_register_world(const RID& p_space, const Callable& p_callback);
+
+	bool rollback_request_correction(const RID& p_space, int64_t p_request_id);
+
+	bool rollback_unregister_world(const RID& p_space);
+
+	void rollback_fail_world(const RID& p_space, const String& p_error);
+
+	Dictionary rollback_get_world_status(const RID& p_space) const;
+
 private:
+	struct RollbackWorld {
+		Callable callback;
+		int64_t completed_steps = 0;
+		int64_t request_id = -1;
+		int64_t request_count = 0;
+	};
+
+	bool _notify_rollback_world(const RID& p_space, bool p_correction);
+
+	bool _rollback_configuration_valid() const;
+
+	bool _rollback_access_valid() const;
+
+	void _fail_reentrant_rollback_operation(const String& p_operation);
+
+	HashMap<RID, RollbackWorld> rollback_worlds;
+
+	RID notifying_rollback_space;
+
+	bool coordinating_rollback = false;
+
+	bool stepping = false;
+
+	bool sync_open = false;
+
 	mutable RID_PtrOwner<JoltSpace3D> space_owner;
 
 	mutable RID_PtrOwner<JoltAreaImpl3D> area_owner;

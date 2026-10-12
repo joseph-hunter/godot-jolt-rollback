@@ -20,6 +20,13 @@ public:
 
 	void call_queries();
 
+	// A failed rollback world stays stopped even after its manager is detached.
+	bool is_rollback_failed() const { return !rollback_error.is_empty(); }
+
+	const String& get_rollback_error() const { return rollback_error; }
+
+	void fail_rollback(const String& p_error);
+
 	RID get_rid() const { return rid; }
 
 	void set_rid(const RID& p_rid) { rid = p_rid; }
@@ -143,4 +150,6 @@ private:
 	bool active = false;
 
 	bool has_stepped = false;
+
+	String rollback_error;
 };

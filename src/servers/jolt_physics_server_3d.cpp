@@ -34,6 +34,12 @@ void JoltPhysicsServer3DExtension::_bind_methods() {
 	BIND_VIRTUAL_METHOD(JoltPhysicsServer3DExtension, _soft_body_set_shrinking_factor);
 	BIND_VIRTUAL_METHOD(JoltPhysicsServer3DExtension, _soft_body_get_shrinking_factor);
 
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_register_world, "space", "callback");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_request_correction, "space", "request_id");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_unregister_world, "space");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_fail_world, "space", "error");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_get_world_status, "space");
+
 #ifdef GDJ_CONFIG_EDITOR
 	BIND_METHOD(JoltPhysicsServer3DExtension, dump_debug_snapshots, "dir");
 	BIND_METHOD(JoltPhysicsServer3DExtension, space_dump_debug_snapshot, "space", "dir");
@@ -2062,20 +2068,43 @@ void JoltPhysicsServer3DExtension::_init() {
 
 /* Currently advances every active space when Godot requests a physics update */
 void JoltPhysicsServer3DExtension::_step(real_t p_step) {
+	if (coordinating_rollback || flushing_queries || stepping || sync_open) {
+		_fail_reentrant_rollback_operation("step");
+		return;
+	}
 	if (!active) {
 		return;
 	}
 
+	stepping = true;
 	for (JoltSpace3D* active_space : active_spaces) {
+		const RID space_rid = active_space->get_rid();
+		RollbackWorld* world = rollback_worlds.getptr(space_rid);
+		if (world != nullptr &&
+			(!_rollback_configuration_valid() || ABS(p_step - real_t(1.0 / 120.0)) > real_t(0.000001)))
+		{
+			active_space->fail_rollback("Rollback requires 120 Hz and time scale 1.0.");
+		}
+		if (active_space->is_rollback_failed()) {
+			continue;
+		}
 		job_system->pre_step();
 
 		active_space->step((float)p_step);
 
 		job_system->post_step();
+		if (world != nullptr) {
+			++world->completed_steps;
+		}
 	}
+	stepping = false;
 }
 
 void JoltPhysicsServer3DExtension::_flush_queries() {
+	if (coordinating_rollback || flushing_queries || stepping) {
+		_fail_reentrant_rollback_operation("flush_queries");
+		return;
+	}
 	if (!active) {
 		return;
 	}
@@ -2083,7 +2112,9 @@ void JoltPhysicsServer3DExtension::_flush_queries() {
 	flushing_queries = true;
 
 	for (JoltSpace3D* space : active_spaces) {
-		space->call_queries();
+		if (!space->is_rollback_failed()) {
+			space->call_queries();
+		}
 	}
 
 	flushing_queries = false;
@@ -2109,6 +2140,7 @@ int32_t JoltPhysicsServer3DExtension::_get_process_info(
 
 void JoltPhysicsServer3DExtension::free_space(JoltSpace3D* p_space) {
 	ERR_FAIL_NULL(p_space);
+	rollback_worlds.erase(p_space->get_rid());
 
 	free_area(p_space->get_default_area());
 	space_set_active(p_space->get_rid(), false);
