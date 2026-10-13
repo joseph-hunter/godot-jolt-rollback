@@ -112,6 +112,22 @@ Dictionary JoltPhysicsServer3DExtension::rollback_get_world_status(const RID& p_
 		status["completed_steps"] = world->completed_steps;
 		status["pending_request_count"] = world->request_count;
 		status["latest_request_id"] = world->request_id;
+		int64_t count = 0;
+		int64_t bytes = 0;
+		int64_t oldest_tick = INT64_MAX;
+		int64_t newest_tick = -1;
+		for (const auto& snapshot : world->snapshots) {
+			if (snapshot) {
+				++count;
+				bytes += (int64_t)snapshot->accounted_bytes;
+				oldest_tick = MIN(oldest_tick, snapshot->tick);
+				newest_tick = MAX(newest_tick, snapshot->tick);
+			}
+		}
+		status["snapshot_count"] = count;
+		status["snapshot_bytes"] = bytes;
+		status["oldest_snapshot_tick"] = count != 0 ? oldest_tick : -1;
+		status["newest_snapshot_tick"] = newest_tick;
 	}
 	return status;
 }
@@ -151,6 +167,7 @@ bool JoltPhysicsServer3DExtension::_notify_rollback_world(const RID& p_space, bo
 	// Explicitly advertise the current milestone: no request may be mistaken for
 	// a completed rewind while snapshot/restore/replay operations are unavailable.
 	context["replay_available"] = false;
+	context["restoration_available"] = true;
 	const Callable callback = world->callback;
 	world->request_count = 0;
 	Array arguments;
@@ -171,7 +188,7 @@ bool JoltPhysicsServer3DExtension::_notify_rollback_world(const RID& p_space, bo
 		);
 	}
 	if (p_correction) {
-		space->fail_rollback("Physics snapshot restoration and replay are not implemented yet.");
+		space->fail_rollback("Historical replay stepping is not implemented yet; queued correction cannot be completed.");
 	}
 	return !space->is_rollback_failed();
 }

@@ -227,19 +227,25 @@ The manager callback receives an explicit context distinguishing normal-boundary
 
 ## 12. Implementation plan
 
-### Phase 1 — Establish the vanilla lifecycle
+### Phase 1 — Establish the vanilla lifecycle — Complete
+
+Completed October 11, 2026. Pinned sources, synchronous stepping guarantees, the pre-callback boundary, callback eligibility, and snapshot coverage policies are documented in [the lifecycle audit](rollback-lifecycle-audit.md). Cross-platform runtime validation remains outstanding.
 
 Pin Godot, godot-cpp, and Jolt versions. Trace synchronization, body callbacks, force integration, area notification queues, and the complete stepping path. Confirm synchronous completion and identify state outside the backend recorder. Document the exact snapshot boundary and callback eligibility rules.
 
 Deliverable: lifecycle trace and snapshot coverage inventory. No rollback behavior yet.
 
-### Phase 2 — Add boundary coordination
+### Phase 2 — Add boundary coordination — Complete
 
-Expose world registration and pending correction requests. Add synchronous manager notification at sync. Establish normal tick input context before flushing, capture matching gameplay/physics boundaries, and guard against reentrancy and destroyed participants.
+Completed October 11, 2026. The lifecycle audit reports all 13 boundary-coordination scenarios passing on the pinned Windows runtime. Registration, sync-stage manager dispatch, correction notification, and failure handling are implemented. Physics/gameplay snapshot capture and restoration remain Phase 3 work; correction requests currently stop the world with an explicit unsupported-restoration error.
+
+Expose world registration and pending correction requests. Add synchronous manager notification at sync. Establish normal tick input context before flushing, identify matching gameplay/physics boundaries for later snapshot capture, and guard against reentrancy and destroyed participants.
 
 Deliverable: a manager that observes boundaries and receives correction notifications while ordinary physics behavior remains unchanged.
 
-### Phase 3 — Implement snapshots and safe restoration
+### Phase 3 — Implement snapshots and safe restoration — Complete for the minimal world
+
+Completed October 12, 2026. Restricted fixed-topology capture/restore, 241 boundary slots, validated handles, wrapper callback eligibility, restore-only node synchronization, participant failure control, and Jolt update-error propagation are implemented. All 14 snapshot scenarios and the original 13 boundary scenarios passed on Windows/Godot 4.6. See [the snapshot implementation](rollback-snapshot-implementation.md) for scope, APIs, and the native cached inverse-inertia limitation. Replay and Linux runtime validation remain outstanding.
 
 Implement backend capture/restore plus the extension-state policy from Phase 1. Add compatibility validation, memory limits, handle lifetime, and failure handling. Ensure restored state is visible to gameplay without accidentally consuming the boundary's callbacks twice.
 

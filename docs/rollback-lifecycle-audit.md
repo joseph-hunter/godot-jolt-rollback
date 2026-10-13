@@ -43,9 +43,11 @@ jobs and their worker tasks. There is no asynchronous physics step outstanding
 when the following `_sync()` begins. Internal parallel jobs do not require an
 engine fork or asynchronous correction protocol.
 
-The current space step reports Jolt capacity errors as warnings and returns
-`void`. Replay stepping must propagate these errors to the coordinator and stop
-the world; warning-only handling is insufficient for corrected replay.
+At Phase 1 the space step reported capacity errors as warnings and returned
+`void`. Phase 3 now returns Jolt's error flags and stops registered worlds on any
+update error. The exact pinned update-error assertion has a scoped nonfatal path
+in debug builds so those flags can reach the coordinator; other assertion handling
+and unregistered worlds retain their previous behavior.
 
 The newly added `_sync()` invokes registered managers before ordinary query
 flushing. Rollback APIs require the main thread. Registration/unregistration are
@@ -75,13 +77,19 @@ eligibility. Kinematic movement/contact-reporting has additional enqueue paths.
 The state-synchronization callback updates Godot node state before ordinary
 gameplay processing. Restoration must additionally synchronize bodies whose
 snapshot has no pending callback, without inventing a force-integration callback.
+Phase 3 found that Godot 4.6's native `RigidBody3D::_body_state_changed()` also
+invokes the script `_integrate_forces()` virtual. Calling this native callback
+for restore-only synchronization therefore invents integration. The implemented
+minimal path uses public node cache setters with backend writeback suppressed;
+see [the snapshot implementation](rollback-snapshot-implementation.md) for the
+supported fields and the native inverse-inertia cache limitation.
 The future replay flush should reuse these paths and preserve their order, while
 leaving the final boundary's callbacks for ordinary flushing.
 
 ## Snapshot coverage and proposed policies
 
-These policies describe the required snapshot implementation. Capture/restore
-has **not** been implemented by the boundary-coordination milestone.
+These policies were the Phase 1 inventory. Phase 3 implements the restricted
+capture/restore contract documented in [the snapshot implementation](rollback-snapshot-implementation.md).
 
 | State | Coverage / restoration policy |
 |---|---|
@@ -129,18 +137,21 @@ normal preparation. False, a nonboolean result, or an expired callback owner sto
 the world. `completed_steps` is diagnostic progress relative to registration;
 the manager owns logical tick numbering and histories.
 
-At this milestone `replay_available` is always false. A queued correction notifies
+At the boundary-coordination milestone `replay_available` was always false. A queued correction notified
 the manager, then stops the world with an explicit unsupported-restoration error,
-even if the callback returns true. There is no false success path. Capture,
-restoration, manual replay steps, and replay callback flushing remain Phase 3/4
-work. The API distinguishes pending notification from a future authorized
+even if the callback returns true. Phase 3 now advertises `restoration_available`
+and implements capture/restore. `replay_available` remains false and queued
+corrections stop with an explicit unsupported-replay error. The API distinguishes
+pending notification from a future authorized
 correction session so that those operations can be added without moving the
 boundary.
 
 Stopping physics does not stop SceneTree processing. Participants must honor the
 manager's failure state, and presentation/UI should remain responsive. This
-milestone exposes failure status but does not provide a production manager or
-automatically suspend arbitrary gameplay nodes.
+milestone exposed failure status without suspending gameplay nodes. Phase 3 adds
+explicit participant registration and disables registered nodes' script process
+and input dispatch on failure. Arbitrary signal handlers and external calls still
+require a manager failure guard; unrelated UI and worlds continue.
 
 ## Verification
 

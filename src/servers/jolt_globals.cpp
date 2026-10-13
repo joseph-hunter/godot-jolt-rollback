@@ -5,6 +5,16 @@
 #include "shapes/jolt_custom_ray_shape.hpp"
 #include "shapes/jolt_custom_user_data_shape.hpp"
 
+namespace {
+thread_local bool return_update_errors = false;
+}
+
+bool jolt_set_update_error_return(bool p_enabled) {
+	const bool previous = return_update_errors;
+	return_update_errors = p_enabled;
+	return previous;
+}
+
 #ifdef GDJ_USE_MIMALLOC
 
 #include <mimalloc-new-delete.h>
@@ -50,6 +60,12 @@ void jolt_trace(const char* p_format, ...) {
 }
 
 bool jolt_assert(const char* p_expr, const char* p_msg, const char* p_file, uint32_t p_line) {
+	if (return_update_errors && strcmp(p_expr, "errors == EPhysicsUpdateError::None") == 0 &&
+		String(p_file).get_file() == "PhysicsSystem.cpp") {
+		// Update has already joined its jobs and unlocked bodies here. Returning
+		// false lets the caller observe the error flags and stop the affected world.
+		return false;
+	}
 	CRASH_NOW_MSG(vformat(
 		"Assertion '%s' failed with message '%s' at '%s:%d'",
 		p_expr,

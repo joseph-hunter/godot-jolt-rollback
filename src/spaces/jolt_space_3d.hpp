@@ -9,6 +9,7 @@ class JoltJointImpl3D;
 class JoltLayerMapper;
 class JoltObjectImpl3D;
 class JoltPhysicsDirectSpaceState3DExtension;
+struct JoltRollbackSnapshot;
 
 class JoltSpace3D {
 public:
@@ -16,7 +17,10 @@ public:
 
 	~JoltSpace3D();
 
-	void step(float p_step);
+	JPH::EPhysicsUpdateError step(float p_step, bool p_return_update_errors = false);
+	bool capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot);
+	bool restore_rollback_snapshot(JoltRollbackSnapshot& p_snapshot);
+	void synchronize_rollback_nodes();
 
 	void call_queries();
 
@@ -152,4 +156,5 @@ private:
 	bool has_stepped = false;
 
 	String rollback_error;
+	uint64_t configuration_generation = 0;
 };

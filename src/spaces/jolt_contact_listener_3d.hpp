@@ -66,6 +66,18 @@ public:
 
 	void post_step();
 
+	bool supports_rollback_snapshot() const {
+		return manifolds_by_shape_pair.is_empty() && area_overlaps.is_empty() &&
+			area_enters.is_empty() && area_exits.is_empty();
+	}
+
+	void reset_rollback_debug_state() {
+		listening_for.clear();
+#ifdef GDJ_CONFIG_EDITOR
+		debug_contact_count = 0;
+#endif
+	}
+
 #ifdef GDJ_CONFIG_EDITOR
 	const PackedVector3Array& get_debug_contacts() const { return debug_contacts; }
 

@@ -1,5 +1,11 @@
 #pragma once
 
+#include <array>
+#include <memory>
+#include <godot_cpp/classes/node.hpp>
+
+struct JoltRollbackSnapshot;
+
 class JoltAreaImpl3D;
 class JoltBodyImpl3D;
 class JoltJobSystem;
@@ -804,13 +810,27 @@ public:
 
 	Dictionary rollback_get_world_status(const RID& p_space) const;
 
+	int64_t rollback_capture_physics(const RID& p_space, int64_t p_tick);
+	bool rollback_restore_physics(const RID& p_space, int64_t p_handle, int64_t p_tick);
+	bool rollback_release_snapshot(const RID& p_space, int64_t p_handle);
+	bool rollback_register_participant(const RID& p_space, Node* p_node);
+
 private:
+	friend class JoltSpace3D;
+	void _stop_rollback_participants(const RID& p_space);
 	struct RollbackWorld {
 		Callable callback;
 		int64_t completed_steps = 0;
 		int64_t request_id = -1;
 		int64_t request_count = 0;
+		std::array<std::shared_ptr<JoltRollbackSnapshot>, 241> snapshots;
+		LocalVector<ObjectID> participants;
 	};
+
+	bool _rollback_snapshot_access(const RID& p_space);
+	int64_t next_snapshot_handle = 1;
+	bool snapshot_operation = false;
+	bool synchronizing_rollback_nodes = false;
 
 	bool _notify_rollback_world(const RID& p_space, bool p_correction);
 

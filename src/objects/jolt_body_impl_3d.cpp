@@ -824,6 +824,11 @@ void JoltBodyImpl3D::call_queries([[maybe_unused]] JPH::Body& p_jolt_body) {
 		}
 	}
 
+	call_state_sync_callback();
+	sync_state = false;
+}
+
+void JoltBodyImpl3D::call_state_sync_callback() {
 	if (state_sync_callback.is_valid()) {
 		static thread_local Array arguments = []() {
 			Array array;
@@ -835,8 +840,6 @@ void JoltBodyImpl3D::call_queries([[maybe_unused]] JPH::Body& p_jolt_body) {
 
 		state_sync_callback.callv(arguments);
 	}
-
-	sync_state = false;
 }
 
 void JoltBodyImpl3D::pre_step(float p_step, JPH::Body& p_jolt_body) {

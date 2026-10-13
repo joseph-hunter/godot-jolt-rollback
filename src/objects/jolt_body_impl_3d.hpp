@@ -171,6 +171,12 @@ public:
 
 	void call_queries(JPH::Body& p_jolt_body);
 
+	void call_state_sync_callback();
+	bool supports_rollback_snapshot() const;
+	Dictionary capture_rollback_state() const;
+	void restore_rollback_state(const Dictionary& p_state);
+	Dictionary rollback_configuration(const JPH::Body& p_body) const;
+
 	void pre_step(float p_step, JPH::Body& p_jolt_body) override;
 
 	JoltPhysicsDirectBodyState3DExtension* get_direct_state();

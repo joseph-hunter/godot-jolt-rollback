@@ -4,6 +4,7 @@
 #include "objects/jolt_area_impl_3d.hpp"
 #include "objects/jolt_body_impl_3d.hpp"
 #include "servers/jolt_physics_server_3d.hpp"
+#include "servers/jolt_globals.hpp"
 #include "servers/jolt_project_settings.hpp"
 #include "shapes/jolt_custom_shape_type.hpp"
 #include "shapes/jolt_shape_impl_3d.hpp"
@@ -154,18 +155,21 @@ void JoltSpace3D::fail_rollback(const String& p_error) {
 		return;
 	}
 	rollback_error = p_error.is_empty() ? String("Rollback simulation failed.") : p_error;
+	JoltPhysicsServer3DExtension::get_singleton()->_stop_rollback_participants(rid);
 	ERR_PRINT(vformat("Rollback space %d stopped: %s", rid.get_id(), rollback_error));
 }
 
-void JoltSpace3D::step(float p_step) {
+JPH::EPhysicsUpdateError JoltSpace3D::step(float p_step, bool p_return_update_errors) {
 	last_step = p_step;
 
 	_pre_step(p_step);
 
 	physics_system->SetBodyActivationListener(body_activation_listener);
 
+	const bool previous_error_policy = jolt_set_update_error_return(p_return_update_errors);
 	const JPH::EPhysicsUpdateError
 		update_error = physics_system->Update(p_step, 1, temp_allocator, job_system);
+	jolt_set_update_error_return(previous_error_policy);
 
 	if ((update_error & JPH::EPhysicsUpdateError::ManifoldCacheFull) !=
 		JPH::EPhysicsUpdateError::None)
@@ -206,6 +210,7 @@ void JoltSpace3D::step(float p_step) {
 
 	has_stepped = true;
 	bodies_added_since_optimizing = 0;
+	return update_error;
 }
 
 void JoltSpace3D::call_queries() {
@@ -222,7 +227,7 @@ void JoltSpace3D::call_queries() {
 
 	const int32_t body_count = body_accessor.get_count();
 
-	for (int32_t i = 0; i < body_count; ++i) {
+	for (int32_t i = 0; i < body_count && !is_rollback_failed(); ++i) {
 		if (JPH::Body* jolt_body = body_accessor.try_get(i)) {
 			if (!jolt_body->IsSensor() && !jolt_body->IsSoftBody()) {
 				auto* body = reinterpret_cast<JoltBodyImpl3D*>(jolt_body->GetUserData());
@@ -232,7 +237,7 @@ void JoltSpace3D::call_queries() {
 		}
 	}
 
-	for (int32_t i = 0; i < body_count; ++i) {
+	for (int32_t i = 0; i < body_count && !is_rollback_failed(); ++i) {
 		if (JPH::Body* jolt_body = body_accessor.try_get(i)) {
 			if (jolt_body->IsSensor()) {
 				auto* area = reinterpret_cast<JoltAreaImpl3D*>(jolt_body->GetUserData());
@@ -436,6 +441,7 @@ JPH::BodyID JoltSpace3D::add_rigid_body(
 	const JoltObjectImpl3D& p_object,
 	const JPH::BodyCreationSettings& p_settings
 ) {
+	++configuration_generation;
 	const JPH::BodyID body_id = get_body_iface().CreateAndAddBody(
 		p_settings,
 		// HACK(mihe): Since `BODY_STATE_TRANSFORM` will be set right after creation it's more or
@@ -486,6 +492,7 @@ JPH::BodyID JoltSpace3D::add_soft_body(
 }
 
 void JoltSpace3D::remove_body(const JPH::BodyID& p_body_id) {
+	++configuration_generation;
 	JPH::BodyInterface& body_iface = get_body_iface();
 
 	body_iface.RemoveBody(p_body_id);
@@ -511,6 +518,7 @@ void JoltSpace3D::try_optimize() {
 }
 
 void JoltSpace3D::add_joint(JPH::Constraint* p_jolt_ref) {
+	++configuration_generation;
 	physics_system->AddConstraint(p_jolt_ref);
 }
 
@@ -519,6 +527,7 @@ void JoltSpace3D::add_joint(JoltJointImpl3D* p_joint) {
 }
 
 void JoltSpace3D::remove_joint(JPH::Constraint* p_jolt_ref) {
+	++configuration_generation;
 	physics_system->RemoveConstraint(p_jolt_ref);
 }
 

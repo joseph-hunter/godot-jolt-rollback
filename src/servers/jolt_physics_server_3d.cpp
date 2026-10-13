@@ -39,6 +39,10 @@ void JoltPhysicsServer3DExtension::_bind_methods() {
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_unregister_world, "space");
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_fail_world, "space", "error");
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_get_world_status, "space");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_capture_physics, "space", "tick");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_restore_physics, "space", "handle", "tick");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_release_snapshot, "space", "handle");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_register_participant, "space", "node");
 
 #ifdef GDJ_CONFIG_EDITOR
 	BIND_METHOD(JoltPhysicsServer3DExtension, dump_debug_snapshots, "dir");
@@ -921,6 +925,10 @@ void JoltPhysicsServer3DExtension::_body_set_state(
 ) {
 	JoltBodyImpl3D* body = body_owner.get_or_null(p_body);
 	ERR_FAIL_NULL(body);
+	if (synchronizing_rollback_nodes && body->get_space() != nullptr &&
+		body->get_space()->get_rid() == notifying_rollback_space) {
+		return;
+	}
 
 	body->set_state(p_state, p_value);
 }
@@ -2041,6 +2049,10 @@ bool JoltPhysicsServer3DExtension::_joint_is_disabled_collisions_between_bodies(
 }
 
 void JoltPhysicsServer3DExtension::_free_rid(const RID& p_rid) {
+	if (snapshot_operation) {
+		_fail_reentrant_rollback_operation("free_rid during snapshot operation");
+		return;
+	}
 	if (JoltShapeImpl3D* shape = shape_owner.get_or_null(p_rid)) {
 		free_shape(shape);
 	} else if (JoltBodyImpl3D* body = body_owner.get_or_null(p_rid)) {
@@ -2090,9 +2102,12 @@ void JoltPhysicsServer3DExtension::_step(real_t p_step) {
 		}
 		job_system->pre_step();
 
-		active_space->step((float)p_step);
+		const JPH::EPhysicsUpdateError update_error = active_space->step((float)p_step, world != nullptr);
 
 		job_system->post_step();
+		if (world != nullptr && update_error != JPH::EPhysicsUpdateError::None) {
+			active_space->fail_rollback(vformat("Jolt update failed with error flags %d.", (int)update_error));
+		}
 		if (world != nullptr) {
 			++world->completed_steps;
 		}
