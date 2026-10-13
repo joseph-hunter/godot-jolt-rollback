@@ -101,7 +101,7 @@ func _states() -> Array:
 
 func _boundary(context: Dictionary) -> bool:
 	steps = context.completed_steps
-	_check(context.restoration_available and not context.replay_available, "Wrong milestone capabilities.")
+	_check(context.restoration_available and context.replay_available, "Wrong milestone capabilities.")
 	trace.clear()
 	tick = saved_tick + steps - 70 if restored else steps
 	if scenario == "restore_sleeping_pending" and tick == saved_tick and not restored:

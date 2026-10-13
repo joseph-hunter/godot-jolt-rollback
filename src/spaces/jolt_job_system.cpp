@@ -18,7 +18,17 @@ void JoltJobSystem::pre_step() {
 	// Nothing to do
 }
 
+JoltJobSystem::~JoltJobSystem() {
+	post_step();
+}
+
 void JoltJobSystem::post_step() {
+	// Jolt's solver barrier completes before the WorkerThreadPool callback's
+	// profiling/refcount tail. Join that tail before draining completed jobs;
+	// otherwise a late FreeJob can arrive after the drain (or during shutdown).
+	while (pending_tasks.load(std::memory_order_acquire) != 0) {
+		OS::get_singleton()->delay_usec(1);
+	}
 	_reclaim_jobs();
 }
 
@@ -57,6 +67,7 @@ JoltJobSystem::Job::Job(
 	JPH::uint32 p_dependency_count
 )
 	: JPH::JobSystem::Job(p_name, p_color, p_job_system, p_job_function, p_dependency_count)
+	, owner(static_cast<JoltJobSystem*>(p_job_system))
 #ifdef GDJ_CONFIG_EDITOR
 	, name(p_name)
 #endif // GDJ_CONFIG_EDITOR
@@ -104,6 +115,7 @@ JoltJobSystem::Job* JoltJobSystem::Job::pop_completed() {
 
 void JoltJobSystem::Job::queue() {
 	AddRef();
+	owner->pending_tasks.fetch_add(1, std::memory_order_relaxed);
 
 	// HACK(mihe): Ideally we would use Jolt's actual job name here, but I'd rather not incur the
 	// overhead of a memory allocation or thread-safe lookup every time we create/queue a task. So
@@ -115,6 +127,7 @@ void JoltJobSystem::Job::queue() {
 
 void JoltJobSystem::Job::_execute(void* p_user_data) {
 	auto* job = static_cast<Job*>(p_user_data);
+	JoltJobSystem* owner = job->owner;
 
 #ifdef GDJ_CONFIG_EDITOR
 	const uint64_t time_start = Time::get_singleton()->get_ticks_usec();
@@ -132,6 +145,7 @@ void JoltJobSystem::Job::_execute(void* p_user_data) {
 #endif // GDJ_CONFIG_EDITOR
 
 	job->Release();
+	owner->pending_tasks.fetch_sub(1, std::memory_order_release);
 }
 
 int JoltJobSystem::GetMaxConcurrency() const {

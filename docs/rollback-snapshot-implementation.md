@@ -86,14 +86,15 @@ budget, not an exact allocator or total-process memory quota. Capturing/validati
 temporarily allocates another recorder. The two-body tests remain far below the
 budget; production replay cost and memory need separate measurement.
 
-The manager context advertises `restoration_available=true` and
-`replay_available=false`. Logical tick numbering remains manager-owned;
+At Phase 3 the manager context advertised `restoration_available=true` and
+`replay_available=false`. Phase 4 now enables controlled replay; see
+[the replay implementation](rollback-replay-implementation.md). Logical tick numbering remains manager-owned;
 `completed_steps` continues to count automatic steps since registration even when
 an earlier boundary is restored. Local restore experiments use normal-boundary
 callbacks, reset logical/gameplay state, and let subsequent ordinary ticks advance.
 This is repeatable restoration and continuation, not historical replay within one
-sync. Queued correction notifications still fail explicitly because manual replay
-stepping and final-boundary delivery ownership are not implemented yet.
+sync. Queued correction callbacks must now complete a replay session and leave
+the final boundary's callbacks pending for ordinary flushing.
 
 ## Failure and gameplay control
 
@@ -143,4 +144,5 @@ ring wrap, and unsafe capture outside the manager callback. Rejected restore
 attempts are checked for absence of partial physical mutation.
 
 Linux/SteamOS/Bazzite execution, cross-platform determinism, authoritative network
-state, full native-cache support, and historical manual replay remain unverified.
+state, and full native-cache support remain unverified. Historical manual replay
+has since been verified in Phase 4 for the same minimal world.

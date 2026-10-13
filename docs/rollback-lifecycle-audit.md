@@ -40,8 +40,13 @@ In this backend, `_step()` wraps each `JoltSpace3D::step()` with job-system
 `PhysicsSystem::Update`, wrapper post-step, and metadata updates. Jolt's update
 waits for its barrier before returning; the job system then reclaims completed
 jobs and their worker tasks. There is no asynchronous physics step outstanding
-when the following `_sync()` begins. Internal parallel jobs do not require an
-engine fork or asynchronous correction protocol.
+when the following `_sync()` begins. Phase 4 stress testing identified a distinction:
+the solver barrier finishes before a worker's profiling/refcount tail necessarily
+does. `post_step()` now joins that trailing cleanup before draining completed jobs,
+and the job-system destructor drains once more. This fixes an intermittent shutdown
+assertion after replay failures. Simulation-state completion was synchronous;
+worker lifetime completion is now explicit too. Internal parallel jobs do not
+require an engine fork or asynchronous correction protocol.
 
 At Phase 1 the space step reported capacity errors as warnings and returned
 `void`. Phase 3 now returns Jolt's error flags and stops registered worlds on any
@@ -140,8 +145,10 @@ the manager owns logical tick numbering and histories.
 At the boundary-coordination milestone `replay_available` was always false. A queued correction notified
 the manager, then stops the world with an explicit unsupported-restoration error,
 even if the callback returns true. Phase 3 now advertises `restoration_available`
-and implements capture/restore. `replay_available` remains false and queued
-corrections stop with an explicit unsupported-replay error. The API distinguishes
+and implements capture/restore. Phase 4 now advertises `replay_available=true` and
+requires queued correction callbacks to complete a controlled replay session.
+Callbacks that return without completing one stop the world explicitly. See
+[the replay implementation](rollback-replay-implementation.md). The API distinguishes
 pending notification from a future authorized
 correction session so that those operations can be added without moving the
 boundary.

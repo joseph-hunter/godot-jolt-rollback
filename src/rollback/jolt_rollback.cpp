@@ -112,6 +112,11 @@ Dictionary JoltPhysicsServer3DExtension::rollback_get_world_status(const RID& p_
 		status["completed_steps"] = world->completed_steps;
 		status["pending_request_count"] = world->request_count;
 		status["latest_request_id"] = world->request_id;
+		status["replay_steps"] = world->replay_steps;
+		status["replay_active"] = world->replay_active;
+		status["replay_tick"] = world->replay_tick;
+		status["replay_end"] = world->replay_end;
+		status["logical_tick"] = world->logical_tick >= 0 ? world->logical_tick + world->completed_steps - world->logical_auto_steps : -1;
 		int64_t count = 0;
 		int64_t bytes = 0;
 		int64_t oldest_tick = INT64_MAX;
@@ -164,16 +169,20 @@ bool JoltPhysicsServer3DExtension::_notify_rollback_world(const RID& p_space, bo
 	context["delta"] = 1.0 / 120.0;
 	context["request_id"] = world->request_id;
 	context["request_count"] = world->request_count;
-	// Explicitly advertise the current milestone: no request may be mistaken for
-	// a completed rewind while snapshot/restore/replay operations are unavailable.
-	context["replay_available"] = false;
+	context["replay_available"] = true;
 	context["restoration_available"] = true;
+	context["tick"] = world->logical_tick >= 0 ? world->logical_tick + world->completed_steps - world->logical_auto_steps : -1;
 	const Callable callback = world->callback;
 	world->request_count = 0;
 	Array arguments;
 	arguments.push_back(context);
 	notifying_rollback_space = p_space;
+	correction_callback = p_correction;
+	if (p_correction) {
+		world->correction_completed = false;
+	}
 	const Variant result = callback.callv(arguments);
+	correction_callback = false;
 	notifying_rollback_space = RID();
 
 	// Gameplay may destroy the space or callback owner. Never retain a map entry or
@@ -187,8 +196,9 @@ bool JoltPhysicsServer3DExtension::_notify_rollback_world(const RID& p_space, bo
 			"Rollback manager must return true after successful boundary preparation."
 		);
 	}
-	if (p_correction) {
-		space->fail_rollback("Historical replay stepping is not implemented yet; queued correction cannot be completed.");
+	world = rollback_worlds.getptr(p_space);
+	if (world->replay_active || (p_correction && !world->correction_completed)) {
+		space->fail_rollback("Correction callback did not finish its replay session at the current boundary.");
 	}
 	return !space->is_rollback_failed();
 }
@@ -222,7 +232,11 @@ void JoltPhysicsServer3DExtension::_sync() {
 			continue;
 		}
 		const bool correction_pending = world->request_count != 0;
-		_notify_rollback_world(space_rid, correction_pending);
+		if (_notify_rollback_world(space_rid, correction_pending) && correction_pending) {
+			// Select the upcoming live input after the historical session. Its callbacks
+			// belong exclusively to the following ordinary flush, never to replay.
+			_notify_rollback_world(space_rid, false);
+		}
 	}
 	coordinating_rollback = false;
 }

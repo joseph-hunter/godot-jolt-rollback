@@ -3,6 +3,7 @@
 class JoltJobSystem final : public JPH::JobSystemWithBarrier {
 public:
 	JoltJobSystem();
+	~JoltJobSystem() override;
 
 	void pre_step();
 
@@ -41,6 +42,7 @@ private:
 		static void _execute(void* p_user_data);
 
 		inline static std::atomic<Job*> completed_head = nullptr;
+		JoltJobSystem* owner = nullptr;
 
 #ifdef GDJ_CONFIG_EDITOR
 		const char* name = nullptr;
@@ -79,4 +81,5 @@ private:
 	FreeList<Job> jobs;
 
 	int32_t thread_count = 0;
+	std::atomic<int32_t> pending_tasks = 0;
 };

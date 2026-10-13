@@ -43,6 +43,10 @@ void JoltPhysicsServer3DExtension::_bind_methods() {
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_restore_physics, "space", "handle", "tick");
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_release_snapshot, "space", "handle");
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_register_participant, "space", "node");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_begin_replay, "space", "handle", "start_tick", "end_tick");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_flush_replay_callbacks, "space", "tick");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_step_manual, "space", "tick", "delta");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_finish_replay, "space", "tick");
 
 #ifdef GDJ_CONFIG_EDITOR
 	BIND_METHOD(JoltPhysicsServer3DExtension, dump_debug_snapshots, "dir");
@@ -2049,6 +2053,11 @@ bool JoltPhysicsServer3DExtension::_joint_is_disabled_collisions_between_bodies(
 }
 
 void JoltPhysicsServer3DExtension::_free_rid(const RID& p_rid) {
+	const RollbackWorld* selected_world = rollback_worlds.getptr(notifying_rollback_space);
+	if (selected_world != nullptr && selected_world->replay_active) {
+		_fail_reentrant_rollback_operation("free_rid during replay");
+		return;
+	}
 	if (snapshot_operation) {
 		_fail_reentrant_rollback_operation("free_rid during snapshot operation");
 		return;
@@ -2100,14 +2109,7 @@ void JoltPhysicsServer3DExtension::_step(real_t p_step) {
 		if (active_space->is_rollback_failed()) {
 			continue;
 		}
-		job_system->pre_step();
-
-		const JPH::EPhysicsUpdateError update_error = active_space->step((float)p_step, world != nullptr);
-
-		job_system->post_step();
-		if (world != nullptr && update_error != JPH::EPhysicsUpdateError::None) {
-			active_space->fail_rollback(vformat("Jolt update failed with error flags %d.", (int)update_error));
-		}
+		_step_space(active_space, (float)p_step, world != nullptr);
 		if (world != nullptr) {
 			++world->completed_steps;
 		}

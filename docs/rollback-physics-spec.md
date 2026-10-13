@@ -251,7 +251,9 @@ Implement backend capture/restore plus the extension-state policy from Phase 1. 
 
 Deliverable: repeatable restore at a documented boundary in a fixed-topology world.
 
-### Phase 4 — Implement explicit replay stepping and callback delivery
+### Phase 4 — Implement explicit replay stepping and callback delivery — Complete for the minimal world
+
+Completed October 13, 2026. Correction callbacks can restore and replay up to 240 retained ticks synchronously, using complete per-world steps and the existing callback path. Corrected boundaries match a reference that used corrected inputs from the beginning, including gameplay state and callback traces. Final callbacks remain pending for normal flushing and the upcoming automatic tick advances exactly once. All 21 replay scenarios, the 14 snapshot scenarios, and the 13 boundary scenarios passed on Windows/Godot 4.6; ten repeated failure/shutdown stress runs also passed. See [the replay implementation](rollback-replay-implementation.md). Linux/cross-platform validation and production replay budgets remain outstanding.
 
 Expose the complete per-world step path and controlled replay flushing. Preserve job handling, callback order, eligibility, and final pending events. Retain ordinary stepping for the upcoming normal tick and unaffected worlds.
 

@@ -104,12 +104,12 @@ func _create_bodies(parent: Node) -> Array[ProbeBody]:
 func _boundary(context: Dictionary) -> bool:
 	_check(context.space == space, "Callback selected the wrong world.")
 	_check(is_equal_approx(context.delta, 1.0 / 120.0), "Incorrect boundary delta.")
-	_check(not context.replay_available, "Phase 2 incorrectly advertises replay.")
+	_check(context.replay_available, "Phase 4 replay capability is missing.")
 	if context.kind == "correction_pending":
 		correction_count += 1
 		_check(context.request_count == 2, "Correction requests were not coalesced.")
 		_check(context.request_id == 22, "Wrong latest correction request ID.")
-		return true # Backend must still stop: replay is not implemented yet.
+		return true # Backend must stop: this callback never completes a replay session.
 	_check(context.kind == "normal_boundary", "Unexpected callback kind.")
 	boundary_count += 1
 	_check(context.completed_steps == tick + 1, "Missing or duplicate automatic step.")

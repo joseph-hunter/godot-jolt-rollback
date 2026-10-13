@@ -285,6 +285,11 @@ int64_t JoltPhysicsServer3DExtension::rollback_capture_physics(const RID& p_spac
 		space->fail_rollback("Snapshot tick must be nonnegative.");
 		return 0;
 	}
+	RollbackWorld* world = rollback_worlds.getptr(p_space);
+	if (world->replay_active && (p_tick != world->replay_tick || world->callbacks_flushed)) {
+		space->fail_rollback("Replay capture must name the current pre-callback boundary.");
+		return 0;
+	}
 	snapshot_operation = true;
 	auto snapshot = std::make_shared<JoltRollbackSnapshot>();
 	const bool captured = space->capture_rollback_snapshot(*snapshot);
@@ -292,15 +297,18 @@ int64_t JoltPhysicsServer3DExtension::rollback_capture_physics(const RID& p_spac
 	if (!captured) {
 		return 0;
 	}
-	RollbackWorld* world = rollback_worlds.getptr(p_space);
 	const size_t slot = (size_t)(p_tick % 241);
 	size_t bytes = snapshot->accounted_bytes;
+	bool configuration_validated = false;
 	for (size_t i = 0; i < world->snapshots.size(); ++i) {
-		if (world->snapshots[i] && !configurations_match(*snapshot, *world->snapshots[i])) {
-			space->fail_rollback(
-				"Immutable configuration changed while snapshot history was retained."
-			);
-			return 0;
+		if (world->snapshots[i] && !configuration_validated) {
+			// Every retained capture already passed this same immutable-configuration
+			// invariant. Validate once, rather than compare all 241 identical signatures.
+			if (!configurations_match(*snapshot, *world->snapshots[i])) {
+				space->fail_rollback("Immutable configuration changed while snapshot history was retained.");
+				return 0;
+			}
+			configuration_validated = true;
 		}
 		if (i != slot && world->snapshots[i]) {
 			bytes += world->snapshots[i]->accounted_bytes;
@@ -317,6 +325,12 @@ int64_t JoltPhysicsServer3DExtension::rollback_capture_physics(const RID& p_spac
 	snapshot->handle = next_snapshot_handle++;
 	snapshot->tick = p_tick;
 	world->snapshots[slot] = snapshot;
+	if (world->replay_active) {
+		world->boundary_captured = true;
+	} else {
+		world->logical_tick = p_tick;
+		world->logical_auto_steps = world->completed_steps;
+	}
 	return snapshot->handle;
 }
 
@@ -330,6 +344,10 @@ bool JoltPhysicsServer3DExtension::rollback_restore_physics(
 	}
 	JoltSpace3D* space = space_owner.get_or_null(p_space);
 	RollbackWorld* world = rollback_worlds.getptr(p_space);
+	if (world->replay_active) {
+		space->fail_rollback("An active replay must not restore its starting boundary again.");
+		return false;
+	}
 	std::shared_ptr<JoltRollbackSnapshot> snapshot;
 	if (p_tick >= 0) {
 		snapshot = world->snapshots[(size_t)(p_tick % 241)];
@@ -351,6 +369,10 @@ bool JoltPhysicsServer3DExtension::rollback_restore_physics(
 		restored = !space->is_rollback_failed();
 	}
 	snapshot_operation = false;
+	if (restored) {
+		world->logical_tick = p_tick;
+		world->logical_auto_steps = world->completed_steps;
+	}
 	return restored;
 }
 
@@ -361,6 +383,10 @@ bool JoltPhysicsServer3DExtension::rollback_release_snapshot(const RID& p_space,
 	ERR_FAIL_NULL_V(world, false);
 	for (auto& snapshot : world->snapshots) {
 		if (snapshot && snapshot->handle == p_handle) {
+			if (world->replay_active && snapshot->tick == world->replay_tick) {
+				space_owner.get_or_null(p_space)->fail_rollback("Cannot release the current replay boundary snapshot.");
+				return false;
+			}
 			snapshot.reset();
 			return true;
 		}

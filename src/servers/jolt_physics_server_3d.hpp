@@ -814,6 +814,10 @@ public:
 	bool rollback_restore_physics(const RID& p_space, int64_t p_handle, int64_t p_tick);
 	bool rollback_release_snapshot(const RID& p_space, int64_t p_handle);
 	bool rollback_register_participant(const RID& p_space, Node* p_node);
+	bool rollback_begin_replay(const RID& p_space, int64_t p_handle, int64_t p_start, int64_t p_end);
+	bool rollback_flush_replay_callbacks(const RID& p_space, int64_t p_tick);
+	bool rollback_step_manual(const RID& p_space, int64_t p_tick, double p_delta);
+	bool rollback_finish_replay(const RID& p_space, int64_t p_tick);
 
 private:
 	friend class JoltSpace3D;
@@ -825,7 +829,20 @@ private:
 		int64_t request_count = 0;
 		std::array<std::shared_ptr<JoltRollbackSnapshot>, 241> snapshots;
 		LocalVector<ObjectID> participants;
+		int64_t logical_tick = -1;
+		int64_t logical_auto_steps = 0;
+		int64_t replay_steps = 0;
+		int64_t replay_tick = -1;
+		int64_t replay_end = -1;
+		bool replay_active = false;
+		bool callbacks_flushed = false;
+		bool boundary_captured = false;
+		bool correction_completed = false;
 	};
+
+	bool _rollback_replay_access(const RID& p_space);
+	bool _step_space(JoltSpace3D* p_space, float p_delta, bool p_rollback);
+	bool correction_callback = false;
 
 	bool _rollback_snapshot_access(const RID& p_space);
 	int64_t next_snapshot_handle = 1;
