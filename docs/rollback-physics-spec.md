@@ -19,7 +19,7 @@ Initial scope is a fixed-timestep, fixed-topology physics world: participating b
 The following decisions govern the first implementation and narrow the broader architecture described below:
 
 - Use two simple interacting rigid-body cubes or spheres, not forklift gameplay. Replay both bodies together in one physics space. Static collision geometry remains unchanged. Whole-world rollback is the longer-term goal.
-- Target Godot 4.6 and native Windows/Linux builds, including SteamOS and Bazzite. Pin exact runtime and dependency revisions in the implementation audit. The forklift work in Phase 5 and broader acceptance checks follow the two-body proof of concept.
+- Target Godot 4.6 and native Windows/Linux builds, including SteamOS and Bazzite. Pin exact runtime and dependency revisions in the implementation audit. Phase 5 provides the reusable manager for the two-body proof of concept; forklift integration and broader acceptance checks follow later.
 - Keep gameplay state minimal, but save any mutable values introduced by the test that influence future simulation.
 - Support and verify `_integrate_forces()` during normal execution and replay. Body/node state synchronization remains required infrastructure. Other user-facing physics event callbacks, area events, navigation, and dynamic topology are outside the first proof of concept.
 - Broader callback support is an important future requirement, not permanently excluded. Keep callback delivery structured so these features can be added without redesigning the tick boundary.
@@ -259,11 +259,13 @@ Expose the complete per-world step path and controlled replay flushing. Preserve
 
 Deliverable: a manually replayed physics sequence with consistent callback behavior.
 
-### Phase 5 — Implement the GDScript manager and forklift participants
+### Phase 5 — Implement the reusable GDScript manager — Complete for the minimal world
+
+Completed October 13, 2026. The reusable per-space manager owns tagged input/gameplay histories, stable participants, correction coalescing, replay, presentation suppression, and failure handling. All 16 manager scenarios and the existing 48 boundary/snapshot/replay scenarios passed on Windows/Godot 4.6. The executable two-body fixture uses the shared participant contract against an authoritative reference. See [the manager implementation and integration guide](rollback-manager.md). Forklift integration remains deferred under the accepted proof-of-concept scope.
 
 Build tick/input histories and gameplay snapshots. Extract shared simulation calculations from normal callbacks as needed. Implement correction selection, restoration, input-context switching, replay, and corrected snapshot replacement. Separate presentation effects from simulation callbacks.
 
-Deliverable: forklift suspension and drive logic run identically in normal and replay modes from the same state/input.
+Deliverable: reusable participant simulation runs identically in normal and replay modes from the same state/input. Apply this contract to forklift suspension and drive logic in a later milestone.
 
 ### Phase 6 — Verify network corrections and supported limits
 
