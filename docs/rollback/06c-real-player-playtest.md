@@ -2,15 +2,27 @@
 
 [Documentation index](README.md)
 
-Status: controlled ENet playtest implemented in companion game; human/LAN validation pending  
+Status: ENet lab and Steam invite export implemented; live Steam/Deck validation pending
+
 Date: October 16, 2026
 
 ## First implementation
 
+The Steam delivery follow-up is now implemented in the companion game. Its
+`steam_build/ROLLBACK_LAB.md` describes the isolated Windows/Proton release export,
+main-app beta-branch upload scripts and Host / Invite / Start flow. The lab reuses
+the existing Steam lobby and SteamMultiplayerPeer creation on a dedicated
+MultiplayerAPI, routes cold/running invites into the lab, and checks the exported
+build manifest before starting. Offline exported-runtime contract, convergence,
+delay and stopped-world checks pass. No Steam content has been uploaded by the
+implementation workflow. Actual Steam sessions and PC/Deck agreement remain
+manual validation tasks after upload.
+
 The companion game's `testinghall/rollback_lab/playtest/README.md` contains the
 Host/Join scene and `run-playtest.py --solo` launcher. One window accepts live
 forklift controls; the other can use an optional scripted driver. Both machines
-simulate both forklifts through the existing manager. Steam is outside this step.
+simulate both forklifts through the existing manager. This remains the local
+regression path alongside the Steam export described above.
 
 The initial adapter uses a separate SceneMultiplayer subtree with ENet, a
 prepare/ready/start handshake, matching runtime/backend/source fingerprints,
@@ -21,9 +33,10 @@ physics/gameplay boundary comparisons check convergence. Input storage is bounde
 disconnect, excessive lag, clock divergence and exhausted history stop simulation.
 Restarting the scene is the initial recovery policy.
 
-This uses the game's ENet transport technology without migrating its production
-lobby/authentication or snapshot-puppet path. It does not yet provide clock
-discipline, combat, respawn, Steam transport or production session recovery.
+The editor/local lab uses ENet; the dedicated Steam export uses the existing
+Steam transport with a separate rollback session. Neither migrates production
+match authentication or the snapshot-puppet path. It does not yet provide clock
+discipline, combat, respawn or production session recovery.
 The benchmark's replay stalls remain unresolved; no performance acceptance budget
 has been agreed. Automated fixture results do not replace human feel testing or
 two-machine validation. See the companion guide for commands and recorded checks.
