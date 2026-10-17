@@ -7,6 +7,9 @@
 Godot Jolt is a native extension for the [Godot game engine][god] that allows you to use the [Jolt
 physics engine][jlt] to power Godot's 3D physics.
 
+For this fork's rollback work, see the [rollback phase index](docs/rollback/README.md).
+Build and configuration references are listed in the [documentation index](docs/README.md).
+
 It functions as a drop-in replacement for Godot Physics, by implementing the same nodes that you
 would use normally, like `RigidBody3D` or `CharacterBody3D`.
 

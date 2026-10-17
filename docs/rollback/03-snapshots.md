@@ -1,7 +1,9 @@
-# Snapshot capture and restoration — minimal world
+# Phase 3 — Snapshot capture and restoration
+
+[Documentation index](README.md)
 
 Implemented October 12, 2026, against the revisions in the
-[lifecycle audit](rollback-lifecycle-audit.md). Windows x64 EditorDebug was rebuilt
+[lifecycle audit](01-02-lifecycle-and-boundaries.md). Windows x64 EditorDebug was rebuilt
 and installed into the examples project. All 14 snapshot scenarios and all 13
 original boundary scenarios passed on `4.6.stable.official.89cea1439`.
 
@@ -88,7 +90,7 @@ budget; production replay cost and memory need separate measurement.
 
 At Phase 3 the manager context advertised `restoration_available=true` and
 `replay_available=false`. Phase 4 now enables controlled replay; see
-[the replay implementation](rollback-replay-implementation.md). Logical tick numbering remains manager-owned;
+[the replay implementation](04-replay.md). Logical tick numbering remains manager-owned;
 `completed_steps` continues to count automatic steps since registration even when
 an earlier boundary is restored. Local restore experiments use normal-boundary
 callbacks, reset logical/gameplay state, and let subsequent ordinary ticks advance.

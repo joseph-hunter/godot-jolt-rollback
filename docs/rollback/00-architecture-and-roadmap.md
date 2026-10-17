@@ -1,4 +1,6 @@
-# Rollback physics extension: technical specification and implementation plan
+# Rollback architecture and implementation roadmap
+
+[Documentation index](README.md)
 
 Status: proposed for review  
 Date: October 11, 2026  
@@ -229,7 +231,7 @@ The manager callback receives an explicit context distinguishing normal-boundary
 
 ### Phase 1 — Establish the vanilla lifecycle — Complete
 
-Completed October 11, 2026. Pinned sources, synchronous stepping guarantees, the pre-callback boundary, callback eligibility, and snapshot coverage policies are documented in [the lifecycle audit](rollback-lifecycle-audit.md). Cross-platform runtime validation remains outstanding.
+Completed October 11, 2026. Pinned sources, synchronous stepping guarantees, the pre-callback boundary, callback eligibility, and snapshot coverage policies are documented in [the lifecycle audit](01-02-lifecycle-and-boundaries.md). Cross-platform runtime validation remains outstanding.
 
 Pin Godot, godot-cpp, and Jolt versions. Trace synchronization, body callbacks, force integration, area notification queues, and the complete stepping path. Confirm synchronous completion and identify state outside the backend recorder. Document the exact snapshot boundary and callback eligibility rules.
 
@@ -245,7 +247,7 @@ Deliverable: a manager that observes boundaries and receives correction notifica
 
 ### Phase 3 — Implement snapshots and safe restoration — Complete for the minimal world
 
-Completed October 12, 2026. Restricted fixed-topology capture/restore, 241 boundary slots, validated handles, wrapper callback eligibility, restore-only node synchronization, participant failure control, and Jolt update-error propagation are implemented. All 14 snapshot scenarios and the original 13 boundary scenarios passed on Windows/Godot 4.6. See [the snapshot implementation](rollback-snapshot-implementation.md) for scope, APIs, and the native cached inverse-inertia limitation. Replay and Linux runtime validation remain outstanding.
+Completed October 12, 2026. Restricted fixed-topology capture/restore, 241 boundary slots, validated handles, wrapper callback eligibility, restore-only node synchronization, participant failure control, and Jolt update-error propagation are implemented. All 14 snapshot scenarios and the original 13 boundary scenarios passed on Windows/Godot 4.6. See [the snapshot implementation](03-snapshots.md) for scope, APIs, and the native cached inverse-inertia limitation. Replay and Linux runtime validation remain outstanding.
 
 Implement backend capture/restore plus the extension-state policy from Phase 1. Add compatibility validation, memory limits, handle lifetime, and failure handling. Ensure restored state is visible to gameplay without accidentally consuming the boundary's callbacks twice.
 
@@ -253,7 +255,7 @@ Deliverable: repeatable restore at a documented boundary in a fixed-topology wor
 
 ### Phase 4 — Implement explicit replay stepping and callback delivery — Complete for the minimal world
 
-Completed October 13, 2026. Correction callbacks can restore and replay up to 240 retained ticks synchronously, using complete per-world steps and the existing callback path. Corrected boundaries match a reference that used corrected inputs from the beginning, including gameplay state and callback traces. Final callbacks remain pending for normal flushing and the upcoming automatic tick advances exactly once. All 21 replay scenarios, the 14 snapshot scenarios, and the 13 boundary scenarios passed on Windows/Godot 4.6; ten repeated failure/shutdown stress runs also passed. See [the replay implementation](rollback-replay-implementation.md). Linux/cross-platform validation and production replay budgets remain outstanding.
+Completed October 13, 2026. Correction callbacks can restore and replay up to 240 retained ticks synchronously, using complete per-world steps and the existing callback path. Corrected boundaries match a reference that used corrected inputs from the beginning, including gameplay state and callback traces. Final callbacks remain pending for normal flushing and the upcoming automatic tick advances exactly once. All 21 replay scenarios, the 14 snapshot scenarios, and the 13 boundary scenarios passed on Windows/Godot 4.6; ten repeated failure/shutdown stress runs also passed. See [the replay implementation](04-replay.md). Linux/cross-platform validation and production replay budgets remain outstanding.
 
 Expose the complete per-world step path and controlled replay flushing. Preserve job handling, callback order, eligibility, and final pending events. Retain ordinary stepping for the upcoming normal tick and unaffected worlds.
 
@@ -261,7 +263,7 @@ Deliverable: a manually replayed physics sequence with consistent callback behav
 
 ### Phase 5 — Implement the reusable GDScript manager — Complete for the minimal world
 
-Completed October 13, 2026. The reusable per-space manager owns tagged input/gameplay histories, stable participants, correction coalescing, replay, presentation suppression, and failure handling. All 16 manager scenarios and the existing 48 boundary/snapshot/replay scenarios passed on Windows/Godot 4.6. The executable two-body fixture uses the shared participant contract against an authoritative reference. See [the manager implementation and integration guide](rollback-manager.md). Forklift integration remains deferred under the accepted proof-of-concept scope.
+Completed October 13, 2026. The reusable per-space manager owns tagged input/gameplay histories, stable participants, correction coalescing, replay, presentation suppression, and failure handling. All 16 manager scenarios and the existing 48 boundary/snapshot/replay scenarios passed on Windows/Godot 4.6. The executable two-body fixture uses the shared participant contract against an authoritative reference. See [the manager implementation and integration guide](05-manager.md). Forklift integration remains deferred under the accepted proof-of-concept scope.
 
 Build tick/input histories and gameplay snapshots. Extract shared simulation calculations from normal callbacks as needed. Implement correction selection, restoration, input-context switching, replay, and corrected snapshot replacement. Separate presentation effects from simulation callbacks.
 
@@ -272,6 +274,14 @@ Deliverable: reusable participant simulation runs identically in normal and repl
 Integrate authoritative input or state corrections, retained-history limits, and recovery when the starting tick is unavailable. Profile replay cost and memory. Do not claim deterministic network behavior solely from successful local restore tests.
 
 Deliverable: demonstrated correction handling under delayed and reordered network input, with supported platform/build limits documented.
+
+The current follow-on sequence is [Phase 6B: performance profiling and necessary
+optimization](06b-performance-plan.md), followed by [Phase 6C: a movement-only
+multiplayer playtest with real players](06c-real-player-playtest.md). The latter
+connects the game's input transport to rollback and tests separate machines under
+actual network conditions. Automated localhost tests are its foundation; combat
+is excluded from the first player playtest. See the [phase index](README.md) for
+current evidence and scope.
 
 ## 13. Acceptance checks
 

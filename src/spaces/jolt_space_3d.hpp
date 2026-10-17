@@ -10,6 +10,7 @@ class JoltLayerMapper;
 class JoltObjectImpl3D;
 class JoltPhysicsDirectSpaceState3DExtension;
 struct JoltRollbackSnapshot;
+struct JoltRollbackTimings;
 
 class JoltSpace3D {
 public:
@@ -17,9 +18,9 @@ public:
 
 	~JoltSpace3D();
 
-	JPH::EPhysicsUpdateError step(float p_step, bool p_return_update_errors = false);
-	bool capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot);
-	bool restore_rollback_snapshot(JoltRollbackSnapshot& p_snapshot);
+	JPH::EPhysicsUpdateError step(float p_step, bool p_return_update_errors = false, JoltRollbackTimings* p_profile = nullptr);
+	bool capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, JoltRollbackTimings* p_profile = nullptr);
+	bool restore_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, JoltRollbackTimings* p_profile = nullptr);
 	void synchronize_rollback_nodes();
 
 	void call_queries();

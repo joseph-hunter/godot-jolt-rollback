@@ -1,7 +1,9 @@
-# Reusable GDScript rollback manager
+# Phase 5 — Reusable GDScript rollback manager
+
+[Documentation index](README.md)
 
 Phase 5, October 13, 2026. The reusable script is
-[`examples/rollback/rollback_manager.gd`](../examples/rollback/rollback_manager.gd).
+[`examples/rollback/rollback_manager.gd`](../../examples/rollback/rollback_manager.gd).
 It uses the Phase 4 extension APIs unchanged. This milestone covers the accepted
 two-body world; forklift suspension/drive integration remains later work.
 
@@ -169,5 +171,5 @@ passed on the pinned Windows Godot 4.6 runtime. Linux/SteamOS/Bazzite runtime
 validation, cross-platform determinism, production replay budgets, network/state
 protocols, forklift gameplay, dynamic topology, and broader callback support remain
 outstanding. The existing snapshot restrictions and native cached inverse-inertia
-limitation still apply; see [snapshot details](rollback-snapshot-implementation.md)
-and [replay details](rollback-replay-implementation.md).
+limitation still apply; see [snapshot details](03-snapshots.md)
+and [replay details](04-replay.md).

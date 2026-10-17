@@ -1,7 +1,9 @@
-# Historical replay inside sync — minimal world
+# Phase 4 — Historical replay inside sync
+
+[Documentation index](README.md)
 
 Implemented October 13, 2026. This extends the
-[snapshot implementation](rollback-snapshot-implementation.md) with controlled
+[snapshot implementation](03-snapshots.md) with controlled
 per-world replay inside a synchronous correction callback. All 21 replay scenarios,
 14 snapshot scenarios and 13 boundary scenarios passed on the pinned Godot 4.6
 Windows x64 runtime. Ten consecutive incomplete-replay/shutdown stress runs passed.

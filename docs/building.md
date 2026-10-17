@@ -52,9 +52,9 @@ When ready to compile, use the existing build preset, for example:
 cmake --build --preset windows-msvc-x64-editor-debug
 ```
 
-The rollback files are compiled into the existing extension target. They do not
-yet enable rollback automatically: see [rollback integration notes](rollback.md)
-for the remaining adapter and Godot binding work.
+The rollback files are compiled into the existing extension target. Rollback is
+opt-in per physics space; see the [rollback phase index](rollback/README.md) and
+[manager integration guide](rollback/05-manager.md) for setup and supported scope.
 
 ## Building for Windows
 

@@ -1,4 +1,6 @@
-# Rollback lifecycle audit and boundary coordination
+# Phases 1–2 — Lifecycle audit and boundary coordination
+
+[Documentation index](README.md)
 
 Implementation baseline: October 11, 2026. The initial milestone is two interacting
 rigid bodies at 120 Hz, time scale 1.0, on Godot 4.6. Forklift gameplay, area events,
@@ -86,7 +88,7 @@ Phase 3 found that Godot 4.6's native `RigidBody3D::_body_state_changed()` also
 invokes the script `_integrate_forces()` virtual. Calling this native callback
 for restore-only synchronization therefore invents integration. The implemented
 minimal path uses public node cache setters with backend writeback suppressed;
-see [the snapshot implementation](rollback-snapshot-implementation.md) for the
+see [the snapshot implementation](03-snapshots.md) for the
 supported fields and the native inverse-inertia cache limitation.
 The future replay flush should reuse these paths and preserve their order, while
 leaving the final boundary's callbacks for ordinary flushing.
@@ -94,7 +96,7 @@ leaving the final boundary's callbacks for ordinary flushing.
 ## Snapshot coverage and proposed policies
 
 These policies were the Phase 1 inventory. Phase 3 implements the restricted
-capture/restore contract documented in [the snapshot implementation](rollback-snapshot-implementation.md).
+capture/restore contract documented in [the snapshot implementation](03-snapshots.md).
 
 | State | Coverage / restoration policy |
 |---|---|
@@ -148,7 +150,7 @@ even if the callback returns true. Phase 3 now advertises `restoration_available
 and implements capture/restore. Phase 4 now advertises `replay_available=true` and
 requires queued correction callbacks to complete a controlled replay session.
 Callbacks that return without completing one stop the world explicitly. See
-[the replay implementation](rollback-replay-implementation.md). The API distinguishes
+[the replay implementation](04-replay.md). The API distinguishes
 pending notification from a future authorized
 correction session so that those operations can be added without moving the
 boundary.

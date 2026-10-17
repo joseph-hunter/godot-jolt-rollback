@@ -5,6 +5,7 @@
 #include <godot_cpp/classes/node.hpp>
 
 struct JoltRollbackSnapshot;
+struct JoltRollbackTimings;
 
 class JoltAreaImpl3D;
 class JoltBodyImpl3D;
@@ -818,11 +819,15 @@ public:
 	bool rollback_flush_replay_callbacks(const RID& p_space, int64_t p_tick);
 	bool rollback_step_manual(const RID& p_space, int64_t p_tick, double p_delta);
 	bool rollback_finish_replay(const RID& p_space, int64_t p_tick);
+	bool rollback_set_profiling(const RID& p_space, bool p_enabled);
+	bool rollback_reset_profile(const RID& p_space);
+	Dictionary rollback_get_profile(const RID& p_space) const;
 
 private:
 	friend class JoltSpace3D;
 	void _stop_rollback_participants(const RID& p_space);
 	struct RollbackWorld {
+		std::shared_ptr<JoltRollbackTimings> profile;
 		Callable callback;
 		int64_t completed_steps = 0;
 		int64_t request_id = -1;
@@ -841,7 +846,7 @@ private:
 	};
 
 	bool _rollback_replay_access(const RID& p_space);
-	bool _step_space(JoltSpace3D* p_space, float p_delta, bool p_rollback);
+	bool _step_space(JoltSpace3D* p_space, float p_delta, bool p_rollback, JoltRollbackTimings* p_profile = nullptr);
 	bool correction_callback = false;
 
 	bool _rollback_snapshot_access(const RID& p_space);

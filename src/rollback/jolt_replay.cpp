@@ -8,11 +8,16 @@
 bool JoltPhysicsServer3DExtension::_step_space(
 	JoltSpace3D* p_space,
 	float p_delta,
-	bool p_rollback
+	bool p_rollback,
+	JoltRollbackTimings* p_profile
 ) {
+	JoltRollbackScope prepare_timer(p_profile, JoltRollbackTimings::STEP_JOB_PREPARE);
 	job_system->pre_step();
-	const JPH::EPhysicsUpdateError error = p_space->step(p_delta, p_rollback);
+	prepare_timer.finish();
+	const JPH::EPhysicsUpdateError error = p_space->step(p_delta, p_rollback, p_profile);
+	JoltRollbackScope cleanup_timer(p_profile, JoltRollbackTimings::STEP_JOB_CLEANUP);
 	job_system->post_step();
+	cleanup_timer.finish();
 	if (p_rollback && error != JPH::EPhysicsUpdateError::None) {
 		p_space->fail_rollback(vformat("Jolt update failed with error flags %d.", (int)error));
 	}
@@ -114,7 +119,8 @@ bool JoltPhysicsServer3DExtension::rollback_step_manual(
 		return false;
 	}
 	stepping = true;
-	const bool success = _step_space(space, (float)p_delta, true);
+	const auto profile = world->profile;
+	const bool success = _step_space(space, (float)p_delta, true, profile && profile->active ? profile.get() : nullptr);
 	stepping = false;
 	if (!success) {
 		return false;
@@ -148,5 +154,54 @@ bool JoltPhysicsServer3DExtension::rollback_finish_replay(const RID& p_space, in
 	world->logical_auto_steps = world->completed_steps;
 	world->replay_active = false;
 	world->correction_completed = true;
+	if (world->profile) {
+		world->profile->active = false;
+	}
 	return true;
+}
+
+bool JoltPhysicsServer3DExtension::rollback_set_profiling(const RID& p_space, bool p_enabled) {
+	ERR_FAIL_COND_V(!_rollback_access_valid(), false);
+	ERR_FAIL_COND_V(coordinating_rollback || sync_open || stepping || flushing_queries, false);
+	RollbackWorld* world = rollback_worlds.getptr(p_space);
+	ERR_FAIL_NULL_V(world, false);
+	world->profile = p_enabled ? std::make_shared<JoltRollbackTimings>() : nullptr;
+	return true;
+}
+
+bool JoltPhysicsServer3DExtension::rollback_reset_profile(const RID& p_space) {
+	ERR_FAIL_COND_V(!_rollback_access_valid(), false);
+	ERR_FAIL_COND_V(!coordinating_rollback || !correction_callback || notifying_rollback_space != p_space || flushing_queries || stepping, false);
+	RollbackWorld* world = rollback_worlds.getptr(p_space);
+	ERR_FAIL_NULL_V(world, false);
+	ERR_FAIL_COND_V(!world->profile || world->replay_active, false);
+	world->profile->reset();
+	return true;
+}
+
+Dictionary JoltPhysicsServer3DExtension::rollback_get_profile(const RID& p_space) const {
+	Dictionary result;
+	ERR_FAIL_COND_V(!_rollback_access_valid(), result);
+	const RollbackWorld* world = rollback_worlds.getptr(p_space);
+	ERR_FAIL_NULL_V(world, result);
+	if (!world->profile) {
+		return result;
+	}
+	static const char* names[JoltRollbackTimings::COUNT] = {
+		"restore_validation", "restore_backend", "restore_wrappers", "restore_nodes",
+		"capture_metadata", "capture_backend", "capture_accounting", "capture_compatibility",
+		"step_job_prepare", "step_wrapper_pre", "step_jolt_update", "step_wrapper_post", "step_job_cleanup"
+	};
+	Dictionary elapsed;
+	Dictionary calls;
+	for (size_t i = 0; i < JoltRollbackTimings::COUNT; ++i) {
+		elapsed[names[i]] = (int64_t)world->profile->elapsed[i];
+		calls[names[i]] = (int64_t)world->profile->calls[i];
+	}
+	result["schema_version"] = 1;
+	result["session"] = world->profile->session;
+	result["world"] = (int64_t)p_space.get_id();
+	result["elapsed_ns"] = elapsed;
+	result["calls"] = calls;
+	return result;
 }

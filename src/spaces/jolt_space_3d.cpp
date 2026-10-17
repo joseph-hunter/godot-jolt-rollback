@@ -1,4 +1,5 @@
 #include "jolt_space_3d.hpp"
+#include "rollback/jolt_rollback.hpp"
 
 #include "joints/jolt_joint_impl_3d.hpp"
 #include "objects/jolt_area_impl_3d.hpp"
@@ -159,16 +160,20 @@ void JoltSpace3D::fail_rollback(const String& p_error) {
 	ERR_PRINT(vformat("Rollback space %d stopped: %s", rid.get_id(), rollback_error));
 }
 
-JPH::EPhysicsUpdateError JoltSpace3D::step(float p_step, bool p_return_update_errors) {
+JPH::EPhysicsUpdateError JoltSpace3D::step(float p_step, bool p_return_update_errors, JoltRollbackTimings* p_profile) {
 	last_step = p_step;
 
+	JoltRollbackScope pre_timer(p_profile, JoltRollbackTimings::STEP_WRAPPER_PRE);
 	_pre_step(p_step);
+	pre_timer.finish();
 
 	physics_system->SetBodyActivationListener(body_activation_listener);
 
 	const bool previous_error_policy = jolt_set_update_error_return(p_return_update_errors);
+	JoltRollbackScope update_timer(p_profile, JoltRollbackTimings::STEP_JOLT_UPDATE);
 	const JPH::EPhysicsUpdateError
 		update_error = physics_system->Update(p_step, 1, temp_allocator, job_system);
+	update_timer.finish();
 	jolt_set_update_error_return(previous_error_policy);
 
 	if ((update_error & JPH::EPhysicsUpdateError::ManifoldCacheFull) !=
@@ -206,6 +211,7 @@ JPH::EPhysicsUpdateError JoltSpace3D::step(float p_step, bool p_return_update_er
 
 	physics_system->SetBodyActivationListener(nullptr);
 
+	JoltRollbackScope post_timer(p_profile, JoltRollbackTimings::STEP_WRAPPER_POST);
 	_post_step(p_step);
 
 	has_stepped = true;

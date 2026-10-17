@@ -117,7 +117,8 @@ std::string physics_configuration(const JPH::PhysicsSystem& p_system) {
 }
 } // namespace
 
-bool JoltSpace3D::capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot) {
+bool JoltSpace3D::capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, JoltRollbackTimings* p_profile) {
+	JoltRollbackScope metadata_timer(p_profile, JoltRollbackTimings::CAPTURE_METADATA);
 	if (!contact_listener->supports_rollback_snapshot()) {
 		fail_rollback(
 			"Snapshot proof of concept does not support contact/area notification history."
@@ -170,13 +171,17 @@ bool JoltSpace3D::capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot) {
 	p_snapshot.optimization_count = bodies_added_since_optimizing;
 	p_snapshot.environment = environment_configuration(default_area);
 	p_snapshot.settings = physics_configuration(*physics_system);
+	metadata_timer.finish();
+	JoltRollbackScope recorder_timer(p_profile, JoltRollbackTimings::CAPTURE_BACKEND);
 	physics_system->SaveState(p_snapshot.recorder);
+	recorder_timer.finish();
 	if (p_snapshot.recorder.IsFailed()) {
 		fail_rollback("Jolt snapshot capture failed.");
 		return false;
 	}
 	// Conservative metadata charge includes dictionaries and keys, callback handles,
 	// body entries and exception arrays; shape resources are shared, not copied.
+	JoltRollbackScope accounting_timer(p_profile, JoltRollbackTimings::CAPTURE_ACCOUNTING);
 	p_snapshot.accounted_bytes = sizeof(p_snapshot) + p_snapshot.recorder.GetDataSize() +
 		p_snapshot.settings.size();
 	for (const auto& body : p_snapshot.bodies) {
@@ -188,8 +193,9 @@ bool JoltSpace3D::capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot) {
 	return true;
 }
 
-bool JoltSpace3D::restore_rollback_snapshot(JoltRollbackSnapshot& p_snapshot) {
+bool JoltSpace3D::restore_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, JoltRollbackTimings* p_profile) {
 	// Validate *every* immutable item before the recorder can partially mutate state.
+	JoltRollbackScope validation_timer(p_profile, JoltRollbackTimings::RESTORE_VALIDATION);
 	JoltRollbackSnapshot current;
 	if (!capture_rollback_snapshot(current)) {
 		return false;
@@ -198,11 +204,15 @@ bool JoltSpace3D::restore_rollback_snapshot(JoltRollbackSnapshot& p_snapshot) {
 		fail_rollback("Snapshot topology or immutable configuration is incompatible.");
 		return false;
 	}
+	validation_timer.finish();
+	JoltRollbackScope recorder_timer(p_profile, JoltRollbackTimings::RESTORE_BACKEND);
 	p_snapshot.recorder.Rewind();
 	if (!physics_system->RestoreState(p_snapshot.recorder) || p_snapshot.recorder.IsFailed()) {
 		fail_rollback("Jolt restoration failed after possible partial mutation; reset the world.");
 		return false;
 	}
+	recorder_timer.finish();
+	JoltRollbackScope wrapper_timer(p_profile, JoltRollbackTimings::RESTORE_WRAPPERS);
 	last_step = p_snapshot.last_step;
 	has_stepped = p_snapshot.has_stepped;
 	bodies_added_since_optimizing = p_snapshot.optimization_count;
@@ -290,14 +300,17 @@ int64_t JoltPhysicsServer3DExtension::rollback_capture_physics(const RID& p_spac
 		space->fail_rollback("Replay capture must name the current pre-callback boundary.");
 		return 0;
 	}
+	const auto profile_owner = world->profile;
+	JoltRollbackTimings* profile = world->replay_active && profile_owner && profile_owner->active ? profile_owner.get() : nullptr;
 	snapshot_operation = true;
 	auto snapshot = std::make_shared<JoltRollbackSnapshot>();
-	const bool captured = space->capture_rollback_snapshot(*snapshot);
+	const bool captured = space->capture_rollback_snapshot(*snapshot, profile);
 	snapshot_operation = false;
 	if (!captured) {
 		return 0;
 	}
 	const size_t slot = (size_t)(p_tick % 241);
+	JoltRollbackScope compatibility_timer(profile, JoltRollbackTimings::CAPTURE_COMPATIBILITY);
 	size_t bytes = snapshot->accounted_bytes;
 	bool configuration_validated = false;
 	for (size_t i = 0; i < world->snapshots.size(); ++i) {
@@ -359,10 +372,13 @@ bool JoltPhysicsServer3DExtension::rollback_restore_physics(
 		return false;
 	}
 	snapshot_operation = true;
-	bool restored = space->restore_rollback_snapshot(*snapshot);
+	const auto profile_owner = world->profile;
+	JoltRollbackTimings* profile = profile_owner && profile_owner->active ? profile_owner.get() : nullptr;
+	bool restored = space->restore_rollback_snapshot(*snapshot, profile);
 	if (restored) {
 		flushing_queries = true;
 		synchronizing_rollback_nodes = true;
+		JoltRollbackScope nodes_timer(profile, JoltRollbackTimings::RESTORE_NODES);
 		space->synchronize_rollback_nodes();
 		synchronizing_rollback_nodes = false;
 		flushing_queries = false;

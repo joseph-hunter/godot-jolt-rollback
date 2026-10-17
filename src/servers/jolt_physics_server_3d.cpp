@@ -47,6 +47,9 @@ void JoltPhysicsServer3DExtension::_bind_methods() {
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_flush_replay_callbacks, "space", "tick");
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_step_manual, "space", "tick", "delta");
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_finish_replay, "space", "tick");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_set_profiling, "space", "enabled");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_reset_profile, "space");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_get_profile, "space");
 
 #ifdef GDJ_CONFIG_EDITOR
 	BIND_METHOD(JoltPhysicsServer3DExtension, dump_debug_snapshots, "dir");

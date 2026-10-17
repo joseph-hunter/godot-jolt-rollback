@@ -1,5 +1,5 @@
 extends Node
-## One manager per fixed-topology physics space. See docs/rollback-manager.md.
+## One manager per fixed-topology physics space. See docs/rollback/05-manager.md.
 ## Participants implement rollback_save(), rollback_restore(state), and
 ## rollback_simulate(input, delta). Only this node dispatches their gameplay.
 
