@@ -17,7 +17,8 @@ or letters do not imply missing implementations.
 | 5 | Reusable GDScript manager and participant contract | [05 — Manager](05-manager.md) | Implemented; use this for integration and API/lifetime guidance |
 | 6A | Test network input corrections and retained-history failure | Companion game network guide, below | Windows localhost tests implemented; no separate extension-side phase report yet |
 | 6B | Instrument and profile replay performance | [06B — Performance plan](06b-performance-plan.md), [benchmark results](06b-benchmark-results.md) | Initial instrumentation and optimized baseline implemented; budgets and optimization pending |
-| 6C | Movement-only multiplayer playtest with real players | [06C — Real-player playtest](06c-real-player-playtest.md) | ENet lab and Steam invite export implemented; live Steam and PC/Deck validation pending |
+| 6C | Movement-only multiplayer playtest with real players | [06C — Real-player playtest](06c-real-player-playtest.md) | ENet/Steam lab implemented; user reports Windows PC to Deck Proton movement success |
+| 6D | Fixed-topology rollback launching | [06D � Launching](06d-launching.md) | Game-side attack integration; damage/destruction excluded |
 
 The A/B/C labels distinguish workstreams within the original Phase 6. They do not
 renumber the roadmap or establish a new sequence of completed phases.
@@ -42,7 +43,7 @@ Those relative links assume the repositories are checked out beside each other.
 When browsing this repository alone, open `testinghall/rollback_lab/README.md` and
 `testinghall/rollback_lab/network/README.md` in the game repository instead.
 
-The game tests use actual forklift movement code. Combat, damage/destruction,
+The game tests use actual forklift movement and opt-in launching code. Damage/destruction,
 match lifecycle, production multiplayer integration and cross-platform validation
 remain separate work. Passing the current tests does not imply those features
 are implemented.
