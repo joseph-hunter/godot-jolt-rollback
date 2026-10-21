@@ -19,6 +19,8 @@ or letters do not imply missing implementations.
 | 6B | Instrument and profile replay performance | [06B â€” Performance plan](06b-performance-plan.md), [benchmark results](06b-benchmark-results.md) | Initial instrumentation and optimized baseline implemented; budgets and optimization pending |
 | 6C | Movement-only multiplayer playtest with real players | [06C â€” Real-player playtest](06c-real-player-playtest.md) | ENet/Steam lab implemented; user reports Windows PC to Deck Proton movement success |
 | 6D | Fixed-topology rollback launching | [06D — Launching](06d-launching.md) | Game-side attack integration; damage/destruction excluded |
+| 6E | Host-configured input delay and network simulation | [06E — Network simulation](06e-network-simulation.md) | Zero input delay default; jitter/loss with ordered retry behavior |
+| 6F | Local automated measurement matrix | [06F - Local measurements](06f-local-measurements.md) | Repeatable two-peer diagnostics; separate from production gameplay logging |
 
 The A/B/C labels distinguish workstreams within the original Phase 6. They do not
 renumber the roadmap or establish a new sequence of completed phases.
