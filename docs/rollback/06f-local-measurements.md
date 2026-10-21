@@ -17,3 +17,11 @@ disagreement. Results are recorded in the companion
 Two input-delay ticks reduced clean-delivery replay costs relative to zero in
 that setup; loss produced larger stalls. This is a single-machine instrumented
 baseline, not a Steam/Deck result or a performance acceptance decision.
+
+Follow-on game-side investigations record the
+[outgoing queue-wait fix](../../../construction-man/testinghall/rollback_lab/measurement/QUEUE_WAIT_RESULTS.md)
+and [startup/tick-alignment experiment](../../../construction-man/testinghall/rollback_lab/measurement/STARTUP_ALIGNMENT_RESULTS.md).
+The latter uses calibrated local monotonic clocks and matched current/scheduled
+starts. It finds role-associated correction costs can reverse with timeline
+lead; a shared startup deadline alone does not reliably maintain alignment.
+These experiments change no native API or production startup policy.
