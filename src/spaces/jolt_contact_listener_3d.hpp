@@ -67,9 +67,19 @@ public:
 	void post_step();
 
 	bool supports_rollback_snapshot() const {
-		return manifolds_by_shape_pair.is_empty() && area_overlaps.is_empty() &&
-			area_enters.is_empty() && area_exits.is_empty();
+		if (!area_overlaps.is_empty() || !area_enters.is_empty() || !area_exits.is_empty()) {
+			return false;
+		}
+		for (const auto& entry : manifolds_by_shape_pair) {
+			if (!entry.second.contacts1.is_empty() || !entry.second.contacts2.is_empty()) {
+				return false; // Post-step must have delivered samples to body buffers.
+			}
+		}
+		return true;
 	}
+
+	Array capture_rollback_manifolds() const;
+	void restore_rollback_manifolds(const Array& p_manifolds);
 
 	void reset_rollback_debug_state() {
 		listening_for.clear();

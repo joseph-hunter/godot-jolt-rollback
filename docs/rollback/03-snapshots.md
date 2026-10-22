@@ -9,6 +9,10 @@ original boundary scenarios passed on `4.6.stable.official.89cea1439`.
 
 ## Contract and supported state
 
+Later extension: [Phase 6G](06g-fixed-topology-damage.md) adds direct-body contact
+report buffers and listener bookkeeping. Contact monitoring and area events
+remain excluded. The report below retains its original milestone scope.
+
 Capture and restore are allowed only in the selected world's synchronous manager
 callback at `sync()`, outside query dispatch, stepping, and nested snapshot
 operations. They preserve the pre-callback boundary `B[t]`. A handle names an

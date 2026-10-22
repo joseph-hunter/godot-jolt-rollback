@@ -35,6 +35,7 @@ void JoltPhysicsServer3DExtension::_bind_methods() {
 	BIND_VIRTUAL_METHOD(JoltPhysicsServer3DExtension, _soft_body_get_shrinking_factor);
 
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_register_world, "space", "callback");
+	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_supports_contact_reporting);
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_request_correction, "space", "request_id");
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_unregister_world, "space");
 	BIND_METHOD(JoltPhysicsServer3DExtension, rollback_fail_world, "space", "error");

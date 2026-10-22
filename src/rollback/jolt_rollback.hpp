@@ -66,6 +66,7 @@ struct JoltRollbackSnapshot {
 	bool has_stepped = false;
 	int32_t optimization_count = 0;
 	Dictionary environment;
+	Array contact_manifolds;
 	std::string settings;
 	std::vector<Body> bodies;
 	JPH::StateRecorderImpl recorder;

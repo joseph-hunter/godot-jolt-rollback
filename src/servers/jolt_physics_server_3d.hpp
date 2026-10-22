@@ -802,6 +802,7 @@ public:
 	float generic_6dof_joint_get_applied_torque(const RID& p_joint);
 
 	bool rollback_register_world(const RID& p_space, const Callable& p_callback);
+	bool rollback_supports_contact_reporting() const { return true; }
 
 	bool rollback_request_correction(const RID& p_space, int64_t p_request_id);
 

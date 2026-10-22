@@ -12,7 +12,7 @@ bool JoltBodyImpl3D::supports_rollback_snapshot() const {
 	if (node != nullptr && node->is_contact_monitor_enabled()) {
 		return false;
 	}
-	return (is_static() || is_rigid() || is_rigid_linear()) && !reports_contacts() &&
+	return (is_static() || is_rigid() || is_rigid_linear()) &&
 		areas.is_empty() && joints.is_empty() &&
 		custom_integration_userdata.get_type() == Variant::NIL;
 }
@@ -28,6 +28,24 @@ Dictionary JoltBodyImpl3D::capture_rollback_state() const {
 	state["kinematic_transform"] = kinematic_transform;
 	state["linear_surface_velocity"] = linear_surface_velocity;
 	state["angular_surface_velocity"] = angular_surface_velocity;
+	Array samples;
+	for (int32_t i = 0; i < contact_count; ++i) {
+		const Contact& contact = contacts[i];
+		Dictionary sample;
+		sample["depth"] = contact.depth;
+		sample["shape_index"] = contact.shape_index;
+		sample["collider_shape_index"] = contact.collider_shape_index;
+		sample["normal"] = contact.normal;
+		sample["position"] = contact.position;
+		sample["collider_position"] = contact.collider_position;
+		sample["velocity"] = contact.velocity;
+		sample["collider_velocity"] = contact.collider_velocity;
+		sample["impulse"] = contact.impulse;
+		sample["collider_id"] = (int64_t)contact.collider_id;
+		sample["collider_rid"] = contact.collider_rid;
+		samples.push_back(sample);
+	}
+	state["contacts"] = samples;
 	return state;
 }
 
@@ -41,7 +59,23 @@ void JoltBodyImpl3D::restore_rollback_state(const Dictionary& p_state) {
 	kinematic_transform = p_state["kinematic_transform"];
 	linear_surface_velocity = p_state["linear_surface_velocity"];
 	angular_surface_velocity = p_state["angular_surface_velocity"];
-	contact_count = 0;
+	const Array samples = p_state["contacts"];
+	contact_count = (int32_t)samples.size();
+	for (int32_t i = 0; i < contact_count; ++i) {
+		Contact& contact = contacts[i];
+		const Dictionary sample = samples[i];
+		contact.depth = sample["depth"];
+		contact.shape_index = sample["shape_index"];
+		contact.collider_shape_index = sample["collider_shape_index"];
+		contact.normal = sample["normal"];
+		contact.position = sample["position"];
+		contact.collider_position = sample["collider_position"];
+		contact.velocity = sample["velocity"];
+		contact.collider_velocity = sample["collider_velocity"];
+		contact.impulse = sample["impulse"];
+		contact.collider_id = ObjectID((uint64_t)(int64_t)sample["collider_id"]);
+		contact.collider_rid = sample["collider_rid"];
+	}
 }
 
 Dictionary JoltBodyImpl3D::rollback_configuration(const JPH::Body& p_body) const {
@@ -64,6 +98,7 @@ Dictionary JoltBodyImpl3D::rollback_configuration(const JPH::Body& p_body) const
 	Dictionary configuration;
 	configuration["backend"] = binary;
 	configuration["mode"] = (int)mode;
+	configuration["max_contacts"] = (int64_t)contacts.size();
 	configuration["mass"] = mass;
 	configuration["inertia"] = inertia;
 	configuration["scale"] = scale;
@@ -121,7 +156,7 @@ bool JoltSpace3D::capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, Jo
 	JoltRollbackScope metadata_timer(p_profile, JoltRollbackTimings::CAPTURE_METADATA);
 	if (!contact_listener->supports_rollback_snapshot()) {
 		fail_rollback(
-			"Snapshot proof of concept does not support contact/area notification history."
+			"Snapshot does not support area notifications or unflushed contact samples."
 		);
 		return false;
 	}
@@ -151,7 +186,7 @@ bool JoltSpace3D::capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, Jo
 		if (!body->supports_rollback_snapshot()) {
 			body_accessor.release();
 			fail_rollback(
-				"Unsupported snapshot configuration: kinematic bodies, contacts, areas, joints or "
+				"Unsupported snapshot configuration: kinematic bodies, contact monitoring, areas, joints or "
 				"integration userdata."
 			);
 			return false;
@@ -171,6 +206,7 @@ bool JoltSpace3D::capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, Jo
 	p_snapshot.optimization_count = bodies_added_since_optimizing;
 	p_snapshot.environment = environment_configuration(default_area);
 	p_snapshot.settings = physics_configuration(*physics_system);
+	p_snapshot.contact_manifolds = contact_listener->capture_rollback_manifolds();
 	metadata_timer.finish();
 	JoltRollbackScope recorder_timer(p_profile, JoltRollbackTimings::CAPTURE_BACKEND);
 	physics_system->SaveState(p_snapshot.recorder);
@@ -183,12 +219,14 @@ bool JoltSpace3D::capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, Jo
 	// body entries and exception arrays; shape resources are shared, not copied.
 	JoltRollbackScope accounting_timer(p_profile, JoltRollbackTimings::CAPTURE_ACCOUNTING);
 	p_snapshot.accounted_bytes = sizeof(p_snapshot) + p_snapshot.recorder.GetDataSize() +
-		p_snapshot.settings.size();
+		p_snapshot.settings.size() + (size_t)p_snapshot.contact_manifolds.size() * 256;
 	for (const auto& body : p_snapshot.bodies) {
 		const PackedByteArray binary = body.configuration["backend"];
 		const Array exceptions = body.configuration["exceptions"];
 		p_snapshot.accounted_bytes += sizeof(body) + 8192 + (size_t)binary.size() +
 			(size_t)exceptions.size() * 32;
+		const Array samples = body.state["contacts"];
+		p_snapshot.accounted_bytes += (size_t)samples.size() * 2048;
 	}
 	return true;
 }
@@ -217,6 +255,7 @@ bool JoltSpace3D::restore_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, Jo
 	has_stepped = p_snapshot.has_stepped;
 	bodies_added_since_optimizing = p_snapshot.optimization_count;
 	contact_listener->reset_rollback_debug_state();
+	contact_listener->restore_rollback_manifolds(p_snapshot.contact_manifolds);
 	for (const auto& saved : p_snapshot.bodies) {
 		const JoltWritableBody3D jolt_body = write_body(saved.id);
 		auto* body = reinterpret_cast<JoltBodyImpl3D*>(jolt_body->GetUserData());

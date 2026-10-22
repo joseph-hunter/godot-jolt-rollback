@@ -10,6 +10,34 @@ void JoltContactListener3D::listen_for(JoltShapedObjectImpl3D* p_object) {
 	listening_for.insert(p_object->get_jolt_id());
 }
 
+Array JoltContactListener3D::capture_rollback_manifolds() const {
+	Array result;
+	for (const auto& entry : manifolds_by_shape_pair) {
+		const auto& pair = entry.first;
+		Array saved;
+		saved.push_back((int64_t)pair.GetBody1ID().GetIndexAndSequenceNumber());
+		saved.push_back((int64_t)pair.GetSubShapeID1().GetValue());
+		saved.push_back((int64_t)pair.GetBody2ID().GetIndexAndSequenceNumber());
+		saved.push_back((int64_t)pair.GetSubShapeID2().GetValue());
+		saved.push_back(entry.second.depth);
+		result.push_back(saved);
+	}
+	return result;
+}
+
+void JoltContactListener3D::restore_rollback_manifolds(const Array& p_manifolds) {
+	manifolds_by_shape_pair.clear();
+	for (int64_t i = 0; i < p_manifolds.size(); ++i) {
+		const Array saved = p_manifolds[i];
+		JPH::SubShapeID sub1, sub2;
+		sub1.SetValue((uint32_t)(int64_t)saved[1]);
+		sub2.SetValue((uint32_t)(int64_t)saved[3]);
+		const JPH::SubShapeIDPair pair(JPH::BodyID((uint32_t)(int64_t)saved[0]), sub1,
+			JPH::BodyID((uint32_t)(int64_t)saved[2]), sub2);
+		manifolds_by_shape_pair[pair].depth = saved[4];
+	}
+}
+
 void JoltContactListener3D::pre_step() {
 	listening_for.clear();
 
@@ -490,7 +518,20 @@ bool JoltContactListener3D::_try_add_debug_contacts(
 #endif // GDJ_CONFIG_EDITOR
 
 void JoltContactListener3D::_flush_contacts() {
-	for (auto&& [shape_pair, manifold] : manifolds_by_shape_pair) {
+	LocalVector<JPH::SubShapeIDPair> pairs;
+	for (const auto& entry : manifolds_by_shape_pair) {
+		pairs.push_back(entry.first);
+	}
+	if (space->rollback_contact_order) {
+		std::sort(pairs.begin(), pairs.end(), [](const auto& a, const auto& b) {
+			if (a.GetBody1ID() != b.GetBody1ID()) return a.GetBody1ID() < b.GetBody1ID();
+			if (a.GetBody2ID() != b.GetBody2ID()) return a.GetBody2ID() < b.GetBody2ID();
+			if (a.GetSubShapeID1() != b.GetSubShapeID1()) return a.GetSubShapeID1().GetValue() < b.GetSubShapeID1().GetValue();
+			return a.GetSubShapeID2().GetValue() < b.GetSubShapeID2().GetValue();
+		});
+	}
+	for (const auto& shape_pair : pairs) {
+		auto& manifold = manifolds_by_shape_pair[shape_pair];
 		const JPH::BodyID body_ids[] = {shape_pair.GetBody1ID(), shape_pair.GetBody2ID()};
 
 		const JoltReadableBodies3D jolt_bodies = space->read_bodies(body_ids, count_of(body_ids));

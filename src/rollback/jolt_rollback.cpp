@@ -50,6 +50,7 @@ bool JoltPhysicsServer3DExtension::rollback_register_world(
 	RollbackWorld world;
 	world.callback = p_callback;
 	rollback_worlds.insert(p_space, world);
+	space->rollback_contact_order = true;
 	return true;
 }
 
@@ -83,6 +84,9 @@ bool JoltPhysicsServer3DExtension::rollback_unregister_world(const RID& p_space)
 		false,
 		"World unregistration requires an idle server boundary."
 	);
+	if (JoltSpace3D* space = space_owner.get_or_null(p_space)) {
+		space->rollback_contact_order = false;
+	}
 	return rollback_worlds.erase(p_space);
 }
 

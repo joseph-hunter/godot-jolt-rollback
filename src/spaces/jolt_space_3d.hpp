@@ -22,6 +22,7 @@ public:
 	bool capture_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, JoltRollbackTimings* p_profile = nullptr);
 	bool restore_rollback_snapshot(JoltRollbackSnapshot& p_snapshot, JoltRollbackTimings* p_profile = nullptr);
 	void synchronize_rollback_nodes();
+	bool rollback_contact_order = false;
 
 	void call_queries();
 
