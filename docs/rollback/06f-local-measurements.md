@@ -25,3 +25,10 @@ The latter uses calibrated local monotonic clocks and matched current/scheduled
 starts. It finds role-associated correction costs can reverse with timeline
 lead; a shared startup deadline alone does not reliably maintain alignment.
 These experiments change no native API or production startup policy.
+
+The subsequent [controlled-stall frame-pacing pass](../../../construction-man/testinghall/rollback_lab/measurement/FRAME_PACING_RESULTS.md)
+completed 15/15 rendered pairs. Long hitches reached normal catch-up limits and
+could leave changed relative timing; shorter hitches and controls varied. No
+single production fix for the reported choppiness was established. The bounded
+investigation is parked at the user's stated stopping point, with current
+behavior retained as a known limitation.
