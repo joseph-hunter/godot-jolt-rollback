@@ -54,10 +54,6 @@ Enabling it builds Jolt with its cross-platform determinism configuration and ap
 matching definition to the extension. See [building with cross-platform determinism](docs/building.md#building-with-cross-platform-determinism)
 for configuration and verification instructions.
 
-While Jolt itself offers deterministic simulations, Godot Jolt is not able to make such guarantees.
-Simulations in Godot Jolt may look deterministic, and may even happen to be deterministic, but this
-should not be relied upon if determinism is a hard requirement.
-
 ## What's not supported?
 
 - The physics server is not thread-safe
